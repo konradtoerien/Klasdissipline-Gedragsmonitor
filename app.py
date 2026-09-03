@@ -3,6 +3,8 @@ import pandas as pd
 import datetime
 import pytz
 import io
+import gspread
+from google.oauth2.service_account import Credentials
 
 st.set_page_config(page_title="Gr.7 KT Klasdissipline", layout="wide")
 
@@ -67,11 +69,72 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Sessie-toestand vir die logboek
+# --- GOOGLE SHEETS VERBINDING ---
+@st.cache_resource
+def get_google_sheet():
+    scope = ["https://www.googleapis.com/auth/spreadsheets", "https://www.googleapis.com/auth/drive"]
+    credentials = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=scope
+    )
+    client = gspread.authorize(credentials)
+    # Maak die spesifieke sheet oop
+    sheet = client.open("Gr.7KT 2026 Gedrag").sheet1
+    return sheet
+
+try:
+    sheet = get_google_sheet()
+    
+    # Skep opskrifte as die sheet nog heeltemal leeg is
+    if len(sheet.get_all_values()) == 0:
+        sheet.append_row(["Datum/Tyd", "Klas", "Opvoeder", "Leerder", "Ouer_Epos", "Tipe", "Gedrag", "Punte", "Nota"])
+except Exception as e:
+    st.error(f"Fout met verbinding na Google Sheets: {e}")
+    sheet = None
+
+# --- HERLAAI DATA VANAF GOOGLE SHEETS ---
+def laai_data_van_sheet():
+    if sheet:
+        records = sheet.get_all_records()
+        return records
+    return []
+
 if "gedrag_events" not in st.session_state:
-    st.session_state.gedrag_events = []
+    st.session_state.gedrag_events = laai_data_van_sheet()
 
 st.title("🏫 Klasdissipline & Gedragsmonitor")
+
+# --- DEFAULT LEERDERLYST MET EPOSSE ---
+default_leerders_met_epos = """Burger Frederick, frederick@voorbeeld.co.za
+Carelse Anna-Marie, annamarie@voorbeeld.co.za
+Carstens Simon, simon@voorbeeld.co.za
+Claassen JJ, jj@voorbeeld.co.za
+Coetzee Zoë, zoe@voorbeeld.co.za
+Conradie Christel, christel@voorbeeld.co.za
+De Lange Chantenique, chantenique@voorbeeld.co.za
+Geldenhuys Lani, lani@voorbeeld.co.za
+Haak Wilrich, wilrich@voorbeeld.co.za
+Jenneke Kian, kian@voorbeeld.co.za
+Keffers Phoenix, phoenix@voorbeeld.co.za
+Krugel Willem, willem@voorbeeld.co.za
+Lakey Lenvan, lenvan@voorbeeld.co.za
+Lewies Jolynn, jolynn@voorbeeld.co.za
+Mostert Caleb, caleb@voorbeeld.co.za
+Munnik Aniecke, aniecke@voorbeeld.co.za
+Nackerdien Fariah, fariah@voorbeeld.co.za
+Roscher Lianke, lianke@voorbeeld.co.za
+Smith Tayo, tayo@voorbeeld.co.za
+Strydom El-Jay, eljay@voorbeeld.co.za
+Swanepoel Henko, henko@voorbeeld.co.za
+Taylor Theart, theart@voorbeeld.co.za
+Van der Westhuizen Laylah, laylah@voorbeeld.co.za
+Van Tonder Dia, dia@voorbeeld.co.za
+Van Wyk Carah, carah@voorbeeld.co.za
+Vogel Jaco, jaco@voorbeeld.co.za
+Walters Yvonne, yvonne@voorbeeld.co.za
+Wijgergangs Jayden, jayden@voorbeeld.co.za
+Willers Lilly, lilly@voorbeeld.co.za
+Williams Ethan, ethan@voorbeeld.co.za"""
 
 # --- INSTELINGS ---
 with st.expander("⚙️ Klas Instellings & Leerderlys", expanded=False):
@@ -79,25 +142,45 @@ with st.expander("⚙️ Klas Instellings & Leerderlys", expanded=False):
     klas_naam = col_k1.text_input("Klas", value="Gr.7 KT")
     opvoeder_naam = col_k2.text_input("Opvoeder", value="Mnr. Toerien")
     
-    default_leerders = """Burger Frederick, Carelse Anna-Marie, Carstens Simon, Claassen JJ, Coetzee Zoë, Conradie Christel, De Lange Chantenique, Geldenhuys Lani, Haak Wilrich, Jenneke Kian, Keffers Phoenix, Krugel Willem, Lakey Lenvan, Lewies Jolynn, Mostert Caleb, Munnik Aniecke, Nackerdien Fariah, Roscher Lianke, Smith Tayo, Strydom El-Jay, Swanepoel Henko, Taylor Theart, Van der Westhuizen Laylah, Van Tonder Dia, Van Wyk Carah, Vogel Jaco, Walters Yvonne, Wijgergangs Jayden, Willers Lilly, Williams Ethan"""
-    raw_leerders = st.text_area("Leerders se Name (geskei met 'n komma):", value=default_leerders, height=120)
-    leerder_lys = [l.strip() for l in raw_leerders.split(",") if l.strip()]
+    raw_leerders = st.text_area("Leerders se Name en Ouer E-posse (Formaat: Naam, Epos):", value=default_leerders_met_epos, height=150)
+    
+    # Parse name en eposadresse
+    student_dict = {}
+    for line in raw_leerders.split("\n"):
+        if "," in line:
+            parts = line.split(",")
+            naam = parts[0].strip()
+            epos = parts[1].strip()
+            if naam:
+                student_dict[naam] = epos
 
 # Funksie om voorvalle te registreer
 def log_gedrag(leerder, tipe, aksie, punte, nota=""):
     sa_time = datetime.datetime.now(pytz.timezone('Africa/Johannesburg'))
     t_min = sa_time.strftime("%Y-%m-%d %H:%M:%S")
+    uer_epos = student_dict.get(leerder, "")
     
-    st.session_state.gedrag_events.append({
+    nuwe_ry = {
         "Datum/Tyd": t_min,
         "Klas": klas_naam,
         "Opvoeder": opvoeder_naam,
         "Leerder": leerder,
+        "Ouer_Epos": uer_epos,
         "Tipe": tipe,
         "Gedrag": aksie,
         "Punte": punte,
         "Nota": nota
-    })
+    }
+    
+    # Voeg toe aan plaaslike geheue
+    st.session_state.gedrag_events.append(nuwe_ry)
+    
+    # Skryf direk na Google Sheet
+    if sheet:
+        try:
+            sheet.append_row([t_min, klas_naam, opvoeder_naam, leerder, uer_epos, tipe, aksie, punte, nota])
+        except Exception as e:
+            st.error(f"Koor nie op te stoor in Google Sheet nie: {e}")
     
     ikoon = "🟢" if punte > 0 else "🔴"
     st.toast(f"{ikoon} {leerder}: {aksie} ({'+' if punte > 0 else ''}{punte})")
@@ -105,6 +188,14 @@ def log_gedrag(leerder, tipe, aksie, punte, nota=""):
 def kanselleer_laaste():
     if st.session_state.gedrag_events:
         laaste = st.session_state.gedrag_events.pop()
+        # Verwyder ook die laaste ry in Google Sheet
+        if sheet:
+            try:
+                values = sheet.get_all_values()
+                if len(values) > 1:
+                    sheet.delete_rows(len(values))
+            except Exception as e:
+                st.error(f"Koor nie laaste ry te skrap nie: {e}")
         st.toast(f"↩️ Verwyder: {laaste['Leerder']} - {laaste['Gedrag']}")
 
 st.divider()
@@ -118,7 +209,7 @@ st.divider()
 st.markdown("#### 🏃 LEERDER GEDRAGSKNOPPIES")
 st.caption("🟢 **Positief (+1):** Hulpvaardig | Goeie waardes  ──  🔴 **Negatief (-1):** Gesels konstant | Swak dissipline | Waarskuwing")
 
-for leerder in leerder_lys:
+for leerder in student_dict.keys():
     c_label, b1, b2, b3, b4, b5 = st.columns([2.5, 1.2, 1.2, 1.2, 1.2, 1.2])
     
     with c_label:
@@ -145,6 +236,10 @@ col_ctrl1, col_ctrl2 = st.columns(2)
 with col_ctrl1:
     if st.button("↩️ Kanselleer Laaste Inskrywing"):
         kanselleer_laaste()
+with col_ctrl2:
+    if st.button("🔄 Herlaai Data vanaf Google Sheets"):
+        st.session_state.gedrag_events = laai_data_van_sheet()
+        st.toast("✅ Data suksesvol herlaai!")
 
 st.divider()
 
