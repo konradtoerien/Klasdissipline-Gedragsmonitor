@@ -4,7 +4,7 @@ import datetime
 import pytz
 import io
 
-st.set_page_config(page_title="Klasdissipline & Gedragsmonitor", layout="wide")
+st.set_page_config(page_title="Gr.7 KT Klasdissipline", layout="wide")
 
 # Tema en CSS Styl
 st.markdown("""
@@ -44,7 +44,7 @@ st.markdown("""
     }
     
     .student-label {
-        font-size: 12px;
+        font-size: 11px;
         font-weight: bold;
         color: #f4a261;
         line-height: 32px;
@@ -74,13 +74,13 @@ if "gedrag_events" not in st.session_state:
 st.title("🏫 Klasdissipline & Gedragsmonitor")
 
 # --- INSTELINGS ---
-with st.expander("⚙️ Klas Instellings & Leerderlyst", expanded=False):
+with st.expander("⚙️ Klas Instellings & Leerderlys", expanded=False):
     col_k1, col_k2 = st.columns(2)
-    klas_naam = col_k1.text_input("Klas / Graad", value="Graad 7A")
-    vak_naam = col_k2.text_input("Vak / Periode", value="Wiskunde")
+    klas_naam = col_k1.text_input("Klas", value="Gr.7 KT")
+    opvoeder_naam = col_k2.text_input("Opvoeder", value="Mnr. Toerien")
     
-    default_leerders = "Piet Pompies, Jan Alleman, Sannie van der Merwe, Johan Smith, Anika Botha"
-    raw_leerders = st.text_area("Leerders se Name (geskei met 'n komma):", value=default_leerders)
+    default_leerders = """Burger Frederick, Carelse Anna-Marie, Carstens Simon, Claassen JJ, Coetzee Zoë, Conradie Christel, De Lange Chantenique, Geldenhuys Lani, Haak Wilrich, Jenneke Kian, Keffers Phoenix, Krugel Willem, Lakey Lenvan, Lewies Jolynn, Mostert Caleb, Munnik Aniecke, Nackerdien Fariah, Roscher Lianke, Smith Tayo, Strydom El-Jay, Swanepoel Henko, Taylor Theart, Van der Westhuizen Laylah, Van Tonder Dia, Van Wyk Carah, Vogel Jaco, Walters Yvonne, Wijgergangs Jayden, Willers Lilly, Williams Ethan"""
+    raw_leerders = st.text_area("Leerders se Name (geskei met 'n komma):", value=default_leerders, height=120)
     leerder_lys = [l.strip() for l in raw_leerders.split(",") if l.strip()]
 
 # Funksie om voorvalle te registreer
@@ -91,15 +91,15 @@ def log_gedrag(leerder, tipe, aksie, punte, nota=""):
     st.session_state.gedrag_events.append({
         "Datum/Tyd": t_min,
         "Klas": klas_naam,
-        "Vak": vak_naam,
+        "Opvoeder": opvoeder_naam,
         "Leerder": leerder,
-        "Tipe": tipe,  # Positief / Negatief / Algemeen
+        "Tipe": tipe,
         "Gedrag": aksie,
         "Punte": punte,
         "Nota": nota
     })
     
-    ikoon = "🟢" if punte > 0 else ("🔴" if punte < 0 else "ℹ️")
+    ikoon = "🟢" if punte > 0 else "🔴"
     st.toast(f"{ikoon} {leerder}: {aksie} ({'+' if punte > 0 else ''}{punte})")
 
 def kanselleer_laaste():
@@ -116,33 +116,27 @@ st.divider()
 
 # --- LEERDER ROSTER & GEDRAGSKNOPPIES ---
 st.markdown("#### 🏃 LEERDER GEDRAGSKNOPPIES")
-
-# Opskrifte vir die kolomme
-st.caption("🟢 Positief (+1) | 🔴 Negatief (-1) / Waarskuwings")
+st.caption("🟢 **Positief (+1):** Hulpvaardig | Goeie waardes  ──  🔴 **Negatief (-1):** Gesels konstant | Swak dissipline | Waarskuwing")
 
 for leerder in leerder_lys:
-    c_label, b1, b2, b3, b4, b5, b6, b7 = st.columns([2.5, 1, 1, 1, 1, 1, 1, 1])
+    c_label, b1, b2, b3, b4, b5 = st.columns([2.5, 1.2, 1.2, 1.2, 1.2, 1.2])
     
     with c_label:
         st.markdown(f"<div class='student-label'>{leerder}</div>", unsafe_allow_html=True)
         
-    # Positiewe Knoppies
-    if b1.button("🌟 Goeie Waardes", key=f"waardes_{leerder}"): 
-        log_gedrag(leerder, "Positief", "Goeie Waardes / Respek", 1, optionele_nota)
-    if b2.button("🤝 Hulpvaardig", key=f"hulp_{leerder}"): 
-        log_gedrag(leerder, "Positief", "Hulpvaardig / Samewerking", 1, optionele_nota)
-    if b3.button("📚 Goeie Werk", key=f"werk_{leerder}"): 
-        log_gedrag(leerder, "Positief", "Pragtige Werk / Deelname", 1, optionele_nota)
+    # Positiewe Knoppies (+1)
+    if b1.button("🤝 Hulpvaardig", key=f"hulp_{leerder}"): 
+        log_gedrag(leerder, "Positief", "Hulpvaardig", 1, optionele_nota)
+    if b2.button("🌟 Goeie waardes", key=f"waardes_{leerder}"): 
+        log_gedrag(leerder, "Positief", "Goeie waardes", 1, optionele_nota)
         
-    # Negatiewe Knoppies
-    if b4.button("🗣️ Gesels in Klas", key=f"gesels_{leerder}"): 
-        log_gedrag(leerder, "Negatief", "Gesels / Ontwrig klas", -1, optionele_nota)
-    if b5.button("📵 Foon / Afgestrail", key=f"foon_{leerder}"): 
-        log_gedrag(leerder, "Negatief", "Nie gefokus / Ongemagtigde apparaat", -1, optionele_nota)
-    if b6.button("🚫 Huiswerk Nie Gedoen", key=f"hw_{leerder}"): 
-        log_gedrag(leerder, "Negatief", "Huiswerk Onvolledig", -1, optionele_nota)
-    if b7.button("⚠️ Waarskuwing", key=f"waarsk_{leerder}"): 
-        log_gedrag(leerder, "Negatief", "Algemene Waarskuwing", -1, optionele_nota)
+    # Negatiewe Knoppies (-1)
+    if b3.button("🗣️ Gesels konstant", key=f"gesels_{leerder}"): 
+        log_gedrag(leerder, "Negatief", "Gesels konstant", -1, optionele_nota)
+    if b4.button("⚠️ Swak dissipline", key=f"dissipline_{leerder}"): 
+        log_gedrag(leerder, "Negatief", "Swak dissipline", -1, optionele_nota)
+    if b5.button("🚩 Waarskuwing", key=f"waarsk_{leerder}"): 
+        log_gedrag(leerder, "Negatief", "Waarskuwing", -1, optionele_nota)
 
 st.divider()
 
@@ -172,7 +166,6 @@ if st.session_state.gedrag_events:
     with t2:
         st.dataframe(df_events, use_container_width=True)
     with t3:
-        # Filtreer slegs negatiewe voorvalle vir maklike opvolg met ouers
         df_negatief = df_events[df_events["Tipe"] == "Negatief"]
         st.dataframe(df_negatief, use_container_width=True)
 
@@ -189,8 +182,8 @@ if st.session_state.gedrag_events:
     st.download_button(
         label="📥 Laai Klas-Verslag Excel Worksheet (.xlsx) Af",
         data=excel_data,
-        file_name=f"{klas_naam}_{vak_naam}_Gedragsverslag.xlsx",
+        file_name=f"{klas_naam}_Gedragsverslag.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-st.markdown("<div class='app-footer'>Klasdissipline & Gedragsmonitor - Ontwerp vir Onderwysers</div>", unsafe_allow_html=True)
+st.markdown("<div class='app-footer'>Klasdissipline & Gedragsmonitor - Gr.7 KT</div>", unsafe_allow_html=True)
