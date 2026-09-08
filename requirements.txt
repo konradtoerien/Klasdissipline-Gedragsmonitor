@@ -1,6 +1,8 @@
 streamlit
 pandas
 pytz
-openpyxl
 gspread
 google-auth
+openpyxl
+plotly
+fpdf2
