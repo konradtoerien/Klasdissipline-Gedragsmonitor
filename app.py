@@ -29,6 +29,14 @@ st.markdown("""
         color: #ffffff !important;
     }
 
+    /* Text Inputs & Text Areas: Dark, high-contrast text on bright backgrounds */
+    .stTextInput input, .stTextArea textarea {
+        color: #0d1b2a !important;
+        background-color: #ffffff !important;
+        font-weight: 500 !important;
+        border-radius: 4px !important;
+    }
+
     /* Knoppie-style vir Positief en Negatief */
     .stButton>button {
         width: 100%;
@@ -38,6 +46,17 @@ st.markdown("""
         border-radius: 4px;
         padding: 0px !important;
         margin-bottom: 0px !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    /* Button Hover / Cursor Highlight Effect */
+    .stButton>button:hover {
+        background-color: #f4a261 !important;
+        color: #0d1b2a !important;
+        border-color: #f4a261 !important;
+        transform: scale(1.03) !important;
+        box-shadow: 0px 0px 8px rgba(244, 162, 97, 0.6) !important;
+        cursor: pointer !important;
     }
 
     div[data-testid="stHorizontalBlock"] {
