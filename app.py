@@ -8,6 +8,8 @@ from google.oauth2.service_account import Credentials
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+import plotly.express as px
+from fpdf import FPDF
 
 st.set_page_config(page_title="Gr.7 KT Klasdissipline", layout="wide")
 
@@ -112,7 +114,6 @@ def stuur_ouer_epos(ontvanger_epos, leerder_naam, gedrag, opvoeder, nota=""):
         return False
     
     try:
-        # SMTP Instellings uit Secrets
         smtp_server = st.secrets["email"]["smtp_server"]
         smtp_port = st.secrets["email"]["smtp_port"]
         sender_email = st.secrets["email"]["sender_email"]
@@ -148,6 +149,57 @@ Vriendelike groete,
     except Exception as e:
         st.error(f"Kon nie e-pos stuur na {ontvanger_epos} nie: {e}")
         return False
+
+# --- PDF GELEENTHEID FUNKSIE ---
+def genereer_leerder_pdf(leerder_naam, df_leerder_events, opvoeder_naam, klas_naam):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 16)
+    
+    # Opskrif
+    pdf.cell(0, 10, f"Gedragsverslag: {leerder_naam}", new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 6, f"Klas: {klas_naam} | Opvoeder: {opvoeder_naam} | Datum: {datetime.date.today().strftime('%Y-%m-%d')}", new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.ln(8)
+    
+    # Opsomming Stat
+    pos = len(df_leerder_events[df_leerder_events["Tipe"] == "Positief"])
+    neg = len(df_leerder_events[df_leerder_events["Tipe"] == "Negatief"])
+    punte = df_leerder_events["Punte"].sum()
+    
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 6, f"Totaal Positief: {pos} | Totaal Negatief: {neg} | Totale Punte: {punte}", new_x="LMARGIN", new_y="NEXT")
+    pdf.ln(4)
+    
+    # Tabel Opskrifte
+    pdf.set_fill_color(240, 240, 240)
+    pdf.set_font("Helvetica", "B", 10)
+    pdf.cell(40, 8, "Datum/Tyd", border=1, fill=True)
+    pdf.cell(25, 8, "Tipe", border=1, fill=True)
+    pdf.cell(45, 8, "Gedrag", border=1, fill=True)
+    pdf.cell(15, 8, "Punte", border=1, fill=True)
+    pdf.cell(65, 8, "Nota", border=1, fill=True, new_x="LMARGIN", new_y="NEXT")
+    
+    # Tabel Data
+    pdf.set_font("Helvetica", "", 9)
+    for _, row in df_leerder_events.iterrows():
+        dt = str(row.get("Datum/Tyd", ""))[:16]
+        tipe = str(row.get("Tipe", ""))
+        gedrag = str(row.get("Gedrag", ""))
+        pnt = str(row.get("Punte", ""))
+        nota = str(row.get("Nota", ""))[:35]
+        
+        pdf.cell(40, 7, dt, border=1)
+        pdf.cell(25, 7, tipe, border=1)
+        pdf.cell(45, 7, gedrag, border=1)
+        pdf.cell(15, 7, pnt, border=1)
+        pdf.cell(65, 7, nota, border=1, new_x="LMARGIN", new_y="NEXT")
+        
+    pdf.ln(10)
+    pdf.set_font("Helvetica", "I", 9)
+    pdf.multi_cell(0, 5, "Hierdie verslag is outomaties geskep deur die Klasdissipline & Gedragsmonitor stelsel.")
+    
+    return bytes(pdf.output())
 
 # --- DEFAULT LEERDERLYST MET EPOSSE ---
 default_leerders_met_epos = """Burger Frederick, frederick@voorbeeld.co.za
@@ -295,28 +347,83 @@ with col_ctrl2:
 
 st.divider()
 
-# --- EXPORT & OPSOMMING ---
+# --- EXPORT, GRAFIEKE & OPSOMMING ---
 if st.session_state.gedrag_events:
     df_events = pd.DataFrame(st.session_state.gedrag_events)
     
-    # Maak seker dat albei kolomme bestaan voor groupby uitgevoer word
+    # Veiligheidskontrole vir kolomme
+    df_pivot = df_events.groupby(["Leerder", "Tipe"]).size().unstack(fill_value=0)
     for col in ["Positief", "Negatief"]:
-        if col not in df_events.columns:
-            df_events[col] = 0
+        if col not in df_pivot.columns:
+            df_pivot[col] = 0
             
-    df_leerder_opsomming = df_events.groupby(["Leerder", "Tipe"]).size().unstack(fill_value=0).reset_index()
+    df_leerder_opsomming = df_pivot.reset_index()
     df_punte = df_events.groupby("Leerder")["Punte"].sum().reset_index(name="Totale Gedragspunte")
     df_leerder_finaal = pd.merge(df_leerder_opsomming, df_punte, on="Leerder")
 
-    st.markdown("#### 📊 Gedragsverslag & Opsomming")
+    st.markdown("#### 📊 Gedragsverslag & Visualisering")
     
-    t1, t2, t3 = st.tabs(["🏃 Opsomming per Leerder", "📋 Alle Voorvalle (Tydlyn)", "⚠️ Ouer-Verslag Data"])
+    t1, t2, t3, t4, t5 = st.tabs([
+        "🏃 Opsomming per Leerder", 
+        "📈 Grafieke & Analise", 
+        "📄 PDF Leerder-Verslag", 
+        "📋 Alle Voorvalle (Tydlyn)", 
+        "⚠️ Ouer-Verslag Data"
+    ])
     
     with t1:
         st.dataframe(df_leerder_finaal, use_container_width=True)
+        
     with t2:
-        st.dataframe(df_events, use_container_width=True)
+        col_g1, col_g2 = st.columns(2)
+        with col_g1:
+            st.markdown("**Positief vs Negatief per Leerder**")
+            fig_bar = px.bar(
+                df_leerder_opsomming, 
+                x="Leerder", 
+                y=["Positief", "Negatief"], 
+                barmode="group",
+                color_discrete_map={"Positief": "#2a9d8f", "Negatief": "#e76f51"},
+                template="plotly_dark"
+            )
+            fig_bar.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=80))
+            st.plotly_chart(fig_bar, use_container_width=True)
+            
+        with col_g2:
+            st.markdown("**Verdeling van Gedragstipes**")
+            df_gedrag_counts = df_events["Gedrag"].value_counts().reset_index()
+            df_gedrag_counts.columns = ["Gedrag", "Aantal"]
+            fig_pie = px.pie(
+                df_gedrag_counts, 
+                names="Gedrag", 
+                values="Aantal", 
+                hole=0.4,
+                template="plotly_dark"
+            )
+            fig_pie.update_layout(height=400, margin=dict(l=20, r=20, t=30, b=20))
+            st.plotly_chart(fig_pie, use_container_width=True)
+            
     with t3:
+        st.markdown("**Genereer Individuele PDF Verslag vir Ouers**")
+        gekoose_leerder = st.selectbox("Kies 'n Leerder:", options=sorted(list(student_dict.keys())))
+        
+        df_spec_student = df_events[df_events["Leerder"] == gekoose_leerder]
+        
+        if not df_spec_student.empty:
+            pdf_bytes = genereer_leerder_pdf(gekoose_leerder, df_spec_student, opvoeder_naam, klas_naam)
+            st.download_button(
+                label=f"📄 Laai PDF Verslag af vir {gekoose_leerder}",
+                data=pdf_bytes,
+                file_name=f"{gekoose_leerder}_Gedragsverslag.pdf",
+                mime="application/pdf"
+            )
+        else:
+            st.info(f"Geen inskrywings vir {gekoose_leerder} om 'n PDF te genereer nie.")
+
+    with t4:
+        st.dataframe(df_events, use_container_width=True)
+        
+    with t5:
         df_negatief = df_events[df_events["Tipe"] == "Negatief"]
         st.dataframe(df_negatief, use_container_width=True)
 
