@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 import pytz
 import io
+import urllib.parse
 import gspread
 from google.oauth2.service_account import Credentials
 import smtplib
@@ -90,6 +91,22 @@ st.markdown("""
         margin-top: 20px;
         border-top: 1px solid #1b263b;
     }
+
+    /* WhatsApp Knoppie Styl */
+    .wa-button {
+        display: inline-block;
+        background-color: #25D366;
+        color: #ffffff !important;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: bold;
+        text-decoration: none;
+        border-radius: 5px;
+        margin-top: 5px;
+    }
+    .wa-button:hover {
+        background-color: #128C7E;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -108,7 +125,7 @@ def get_google_sheet():
 try:
     sheet = get_google_sheet()
     if len(sheet.get_all_values()) == 0:
-        sheet.append_row(["Datum/Tyd", "Klas", "Opvoeder", "Leerder", "Ouer_Epos", "Tipe", "Gedrag", "Punte", "Nota"])
+        sheet.append_row(["Datum/Tyd", "Klas", "Opvoeder", "Leerder", "Ouer_Kontak", "Tipe", "Gedrag", "Punte", "Nota"])
 except Exception as e:
     st.error(f"Fout met verbinding na Google Sheets: {e}")
     sheet = None
@@ -123,13 +140,44 @@ def laai_data_van_sheet():
 if "gedrag_events" not in st.session_state:
     st.session_state.gedrag_events = laai_data_van_sheet()
 
+if "laaste_wa_skakel" not in st.session_state:
+    st.session_state.laaste_wa_skakel = None
+
 st.title("🏫 Klasdissipline & Gedragsmonitor")
 
-# --- EMAIL KENNISGEWING FUNKSIE ---
+# --- GRATIS WHATSAPP SKAKEL GENERATOR ---
+def skep_whatsapp_skakel(selnommer, leerder_naam, gedrag, opvoeder, nota=""):
+    """Genereer 'n gratis wa.me skakel met 'n vooraf-getikte boodskap."""
+    if not selnommer:
+        return None
+    
+    # Formatteer Suid-Afrikaanse nommer na internasionale formaat (27...)
+    skoon_nommer = str(selnommer).replace(" ", "").replace("-", "").strip()
+    if skoon_nommer.startswith("0"):
+        skoon_nommer = "27" + skoon_nommer[1:]
+    elif skoon_nommer.startswith("+"):
+        skoon_nommer = skoon_nommer[1:]
+
+    tyd_nou = datetime.datetime.now(pytz.timezone('Africa/Johannesburg')).strftime('%Y-%m-%d %H:%M')
+    
+    boodskap = f"""Beste Ouer,
+
+Hierdie is 'n kennisgewing rakende *{leerder_naam}* in {opvoeder} se klas.
+
+• *Gedrag Aangemeld:* {gedrag}
+• *Datum/Tyd:* {tyd_nou}
+• *Opmerking:* {nota if nota else 'Geen verdere opmerkings nie.'}
+
+Vriendelike groete,
+{opvoeder}"""
+
+    encoded_boodskap = urllib.parse.quote(boodskap)
+    return f"https://wa.me/{skoon_nommer}?text={encoded_boodskap}"
+
+# --- EMAIL KENNISGEWING FUNKSIE (GRATIS VIA SMTP) ---
 def stuur_ouer_epos(ontvanger_epos, leerder_naam, gedrag, opvoeder, nota=""):
     """Stuur 'n outomatiese e-pos na die ouer as 'n negatiewe inskrywing gemaak word."""
     if not ontvanger_epos or "@" not in ontvanger_epos or "voorbeeld.co.za" in ontvanger_epos:
-        st.warning(f"⚠️ Geen geldige e-posadres vir {leerder_naam} gevind nie.")
         return False
     
     try:
@@ -152,7 +200,6 @@ Datum/Tyd: {datetime.datetime.now(pytz.timezone('Africa/Johannesburg')).strftime
 Opmerking: {nota if nota else 'Geen verdere opmerkings nie.'}
 
 Aanvaar asseblief hierdie kennisgewing ter inligting om ons te help om klasdissipline te handhaaf.
-Vir enige verdere navrae, kontak my gerus by ktoerien@swartlandls.co.za.
 
 Vriendelike groete,
 {opvoeder}
@@ -220,69 +267,69 @@ def genereer_leerder_pdf(leerder_naam, df_leerder_events, opvoeder_naam, klas_na
     
     return bytes(pdf.output())
 
-# --- DEFAULT LEERDERLYST MET EPOSSE ---
-default_leerders_met_epos = """Burger Frederick, frederick@voorbeeld.co.za
-Carelse Anna-Marie, annamarie@voorbeeld.co.za
-Carstens Simon, simon@voorbeeld.co.za
-Claassen JJ, jj@voorbeeld.co.za
-Coetzee Zoë, zoe@voorbeeld.co.za
-Conradie Christel, christel@voorbeeld.co.za
-De Lange Chantenique, chantenique@voorbeeld.co.za
-Geldenhuys Lani, lani@voorbeeld.co.za
-Haak Wilrich, wilrich@voorbeeld.co.za
-Jenneke Kian, kian@voorbeeld.co.za
-Keffers Phoenix, phoenix@voorbeeld.co.za
-Krugel Willem, willem@voorbeeld.co.za
-Lakey Lenvan, lenvan@voorbeeld.co.za
-Lewies Jolynn, jolynn@voorbeeld.co.za
-Mostert Caleb, caleb@voorbeeld.co.za
-Munnik Aniecke, aniecke@voorbeeld.co.za
-Nackerdien Fariah, fariah@voorbeeld.co.za
-Roscher Lianke, lianke@voorbeeld.co.za
-Smith Tayo, tayo@voorbeeld.co.za
-Strydom El-Jay, eljay@voorbeeld.co.za
-Swanepoel Henko, henko@voorbeeld.co.za
-Taylor Theart, theart@voorbeeld.co.za
-Van der Westhuizen Laylah, laylah@voorbeeld.co.za
-Van Tonder Dia, dia@voorbeeld.co.za
-Van Wyk Carah, carah@voorbeeld.co.za
-Vogel Jaco, jaco@voorbeeld.co.za
-Walters Yvonne, yvonne@voorbeeld.co.za
-Wijgergangs Jayden, jayden@voorbeeld.co.za
-Willers Lilly, lilly@voorbeeld.co.za
-Williams Ethan, ethan@voorbeeld.co.za"""
+# --- DEFAULT LEERDERLYST MET KONTAKINLIGTING ---
+default_leerders_met_kontak = """Burger Frederick, 0821234567
+Carelse Anna-Marie, 0821234568
+Carstens Simon, 0821234569
+Claassen JJ, 0821234570
+Coetzee Zoë, 0821234571
+Conradie Christel, 0821234572
+De Lange Chantenique, 0821234573
+Geldenhuys Lani, 0821234574
+Haak Wilrich, 0821234575
+Jenneke Kian, 0821234576
+Keffers Phoenix, 0821234577
+Krugel Willem, 0821234578
+Lakey Lenvan, 0821234579
+Lewies Jolynn, 0821234580
+Mostert Caleb, 0821234581
+Munnik Aniecke, 0821234582
+Nackerdien Fariah, 0821234583
+Roscher Lianke, 0821234584
+Smith Tayo, 0821234585
+Strydom El-Jay, 0821234586
+Swanepoel Henko, 0821234587
+Taylor Theart, 0821234588
+Van der Westhuizen Laylah, 0821234589
+Van Tonder Dia, 0821234590
+Van Wyk Carah, 0821234591
+Vogel Jaco, 0821234592
+Walters Yvonne, 0821234593
+Wijgergangs Jayden, 0821234594
+Willers Lilly, 0821234595
+Williams Ethan, 0821234596"""
 
 # --- INSTELINGS ---
-with st.expander("⚙️ Klas Instellings & Ouer E-pos Bestuur", expanded=False):
+with st.expander("⚙️ Klas Instellings & Ouer Kontak Bestuur", expanded=False):
     col_k1, col_k2, col_k3 = st.columns([1.5, 1.5, 1])
     klas_naam = col_k1.text_input("Klas", value="Gr.7 KT")
     opvoeder_naam = col_k2.text_input("Opvoeder", value="Mnr. Toerien")
-    stuur_eposse_aktief = col_k3.checkbox("Outomatiese E-posse Aan", value=False)
+    stuur_eposse_aktief = col_k3.checkbox("Outomatiese E-posse Aan (Gratis)", value=False)
     
-    st.markdown("**Opdateer Leerderlyste en Ouer E-posadresse:**")
-    raw_leerders = st.text_area("Formaat: Leerder Naam, ouer_epos@voorbeeld.co.za", value=default_leerders_met_epos, height=180)
+    st.markdown("**Opdateer Leerderlyste en Ouer Selfoonnommers / E-posse:**")
+    raw_leerders = st.text_area("Formaat: Leerder Naam, 0821234567 (of ouer_epos@voorbeeld.co.za)", value=default_leerders_met_kontak, height=180)
     
     student_dict = {}
     for line in raw_leerders.split("\n"):
         if "," in line:
             parts = line.split(",")
             naam = parts[0].strip()
-            epos = parts[1].strip()
+            kontak = parts[1].strip()
             if naam:
-                student_dict[naam] = epos
+                student_dict[naam] = kontak
 
 # Funksie om voorvalle te registreer
 def log_gedrag(leerder, tipe, aksie, punte, nota=""):
     sa_time = datetime.datetime.now(pytz.timezone('Africa/Johannesburg'))
     t_min = sa_time.strftime("%Y-%m-%d %H:%M:%S")
-    uer_epos = student_dict.get(leerder, "")
+    uer_kontak = student_dict.get(leerder, "")
     
     nuwe_ry = {
         "Datum/Tyd": t_min,
         "Klas": klas_naam,
         "Opvoeder": opvoeder_naam,
         "Leerder": leerder,
-        "Ouer_Epos": uer_epos,
+        "Ouer_Kontak": uer_kontak,
         "Tipe": tipe,
         "Gedrag": aksie,
         "Punte": punte,
@@ -294,16 +341,26 @@ def log_gedrag(leerder, tipe, aksie, punte, nota=""):
     # Skryf na Google Sheet
     if sheet:
         try:
-            sheet.append_row([t_min, klas_naam, opvoeder_naam, leerder, uer_epos, tipe, aksie, punte, nota])
+            sheet.append_row([t_min, klas_naam, opvoeder_naam, leerder, uer_kontak, tipe, aksie, punte, nota])
         except Exception as e:
             st.error(f"Kon nie opstoor in Google Sheet nie: {e}")
     
-    # Outomatiese e-pos stuur vir negatiewe inskrywings
-    if tipe == "Negatief" and stuur_eposse_aktief:
-        with st.spinner("Stuur e-pos na ouer..."):
-            geslaag = stuur_ouer_epos(uer_epos, leerder, aksie, opvoeder_naam, nota)
-            if geslaag:
-                st.toast(f"📧 E-pos gestuur na {uer_epos}")
+    # As dit 'n negatiewe inskrywing is, genereer gratis WhatsApp skakel
+    if tipe == "Negatief":
+        wa_url = skep_whatsapp_skakel(uer_kontak, leerder, aksie, opvoeder_naam, nota)
+        if wa_url:
+            st.session_state.laaste_wa_skakel = {
+                "leerder": leerder,
+                "url": wa_url,
+                "kontak": uer_kontak
+            }
+        
+        # Stuur ook e-pos as dit geaktiveer is
+        if stuur_eposse_aktief:
+            with st.spinner("Stuur e-pos na ouer..."):
+                geslaag_mail = stuur_ouer_epos(uer_kontak, leerder, aksie, opvoeder_naam, nota)
+                if geslaag_mail:
+                    st.toast(f"📧 E-pos gestuur na {uer_kontak}")
 
     ikoon = "🟢" if punte > 0 else "🔴"
     st.toast(f"{ikoon} {leerder}: {aksie} ({'+' if punte > 0 else ''}{punte})")
@@ -319,10 +376,21 @@ def kanselleer_laaste():
                     sheet.delete_rows(len(values))
             except Exception as e:
                 st.error(f"Kon nie laaste ry skrap nie: {e}")
+        st.session_state.laaste_wa_skakel = None
         st.toast(f"↩️ Verwyder: {laaste['Leerder']} - {laaste['Gedrag']}")
         st.rerun()
 
 st.divider()
+
+# --- SNEL WHATSAPP STUUR BANNER (Indien negatiewe voorval pas aangeteken is) ---
+if st.session_state.laaste_wa_skakel:
+    wa_data = st.session_state.laaste_wa_skakel
+    st.info(f"💬 **Stuur WhatsApp na Ouer van {wa_data['leerder']} ({wa_data['kontak']}):**")
+    st.markdown(
+        f"<a href='{wa_data['url']}' target='_blank' class='wa-button'>📲 Klik hier om WhatsApp oop te maak & te stuur</a>", 
+        unsafe_allow_html=True
+    )
+    st.divider()
 
 # --- SPESIFIEKE NOTA INSET ---
 optionele_nota = st.text_input("📝 Opsionele Opmerking/Nota (Tik hier voor jy 'n knoppie druk):", value="")
@@ -361,6 +429,7 @@ with col_ctrl1:
 with col_ctrl2:
     if st.button("🔄 Herlaai Data vanaf Google Sheets"):
         st.session_state.gedrag_events = laai_data_van_sheet()
+        st.session_state.laaste_wa_skakel = None
         st.toast("✅ Data suksesvol herlaai!")
         st.rerun()
 
