@@ -97,15 +97,17 @@ st.markdown("""
         display: inline-block;
         background-color: #25D366;
         color: #ffffff !important;
-        padding: 6px 12px;
-        font-size: 12px;
+        padding: 10px 18px;
+        font-size: 14px;
         font-weight: bold;
         text-decoration: none;
-        border-radius: 5px;
+        border-radius: 6px;
         margin-top: 5px;
+        box-shadow: 0px 2px 6px rgba(0,0,0,0.3);
     }
     .wa-button:hover {
         background-color: #128C7E;
+        color: #ffffff !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -146,8 +148,8 @@ if "laaste_wa_skakel" not in st.session_state:
 st.title("🏫 Klasdissipline & Gedragsmonitor")
 
 # --- GRATIS WHATSAPP SKAKEL GENERATOR ---
-def skep_whatsapp_skakel(selnommer, leerder_naam, gedrag, opvoeder, nota=""):
-    """Genereer 'n gratis wa.me skakel met 'n vooraf-getikte boodskap."""
+def skep_whatsapp_skakel(selnommer, leerder_naam, tipe, gedrag, opvoeder, nota=""):
+    """Genereer 'n whatsapp:// of wa.me skakel wat direk die WhatsApp app oopmaak."""
     if not selnommer:
         return None
     
@@ -160,23 +162,26 @@ def skep_whatsapp_skakel(selnommer, leerder_naam, gedrag, opvoeder, nota=""):
 
     tyd_nou = datetime.datetime.now(pytz.timezone('Africa/Johannesburg')).strftime('%Y-%m-%d %H:%M')
     
+    ikoon = "🌟" if tipe == "Positief" else "⚠️"
+    
     boodskap = f"""Beste Ouer,
 
-Hierdie is 'n kennisgewing rakende *{leerder_naam}* in {opvoeder} se klas.
+Hierdie is 'n {tipe.lower()} kennisgewing rakende *{leerder_naam}* in {opvoeder} se klas.
 
-• *Gedrag Aangemeld:* {gedrag}
-• *Datum/Tyd:* {tyd_nou}
-• *Opmerking:* {nota if nota else 'Geen verdere opmerkings nie.'}
+{ikoon} *Gedrag/Aanmoediging:* {gedrag}
+📅 *Datum/Tyd:* {tyd_nou}
+📝 *Opmerking:* {nota if nota else 'Geen verdere opmerkings nie.'}
 
 Vriendelike groete,
 {opvoeder}"""
 
     encoded_boodskap = urllib.parse.quote(boodskap)
-    return f"https://wa.me/{skoon_nommer}?text={encoded_boodskap}"
+    # whatsapp:// Protocol skakel poog om die app direk oop te maak op Windows/Mac/iOS/Android
+    return f"whatsapp://send?phone={skoon_nommer}&text={encoded_boodskap}"
 
 # --- EMAIL KENNISGEWING FUNKSIE (GRATIS VIA SMTP) ---
 def stuur_ouer_epos(ontvanger_epos, leerder_naam, gedrag, opvoeder, nota=""):
-    """Stuur 'n outomatiese e-pos na die ouer as 'n negatiewe inskrywing gemaak word."""
+    """Stuur 'n outomatiese e-pos na die ouer as 'n inskrywing gemaak word."""
     if not ontvanger_epos or "@" not in ontvanger_epos or "voorbeeld.co.za" in ontvanger_epos:
         return False
     
@@ -199,7 +204,7 @@ Gedrag Aangemeld: {gedrag}
 Datum/Tyd: {datetime.datetime.now(pytz.timezone('Africa/Johannesburg')).strftime('%Y-%m-%d %H:%M')}
 Opmerking: {nota if nota else 'Geen verdere opmerkings nie.'}
 
-Aanvaar asseblief hierdie kennisgewing ter inligting om ons te help om klasdissipline te handhaaf.
+Aanvaar asseblief hierdie kennisgewing ter inligting.
 
 Vriendelike groete,
 {opvoeder}
@@ -345,22 +350,23 @@ def log_gedrag(leerder, tipe, aksie, punte, nota=""):
         except Exception as e:
             st.error(f"Kon nie opstoor in Google Sheet nie: {e}")
     
-    # As dit 'n negatiewe inskrywing is, genereer gratis WhatsApp skakel
-    if tipe == "Negatief":
-        wa_url = skep_whatsapp_skakel(uer_kontak, leerder, aksie, opvoeder_naam, nota)
-        if wa_url:
-            st.session_state.laaste_wa_skakel = {
-                "leerder": leerder,
-                "url": wa_url,
-                "kontak": uer_kontak
-            }
-        
-        # Stuur ook e-pos as dit geaktiveer is
-        if stuur_eposse_aktief:
-            with st.spinner("Stuur e-pos na ouer..."):
-                geslaag_mail = stuur_ouer_epos(uer_kontak, leerder, aksie, opvoeder_naam, nota)
-                if geslaag_mail:
-                    st.toast(f"📧 E-pos gestuur na {uer_kontak}")
+    # Genereer WhatsApp-skakel vir ALBEI (Positief en Negatief)
+    wa_url = skep_whatsapp_skakel(uer_kontak, leerder, tipe, aksie, opvoeder_naam, nota)
+    if wa_url:
+        st.session_state.laaste_wa_skakel = {
+            "leerder": leerder,
+            "tipe": tipe,
+            "aksie": aksie,
+            "url": wa_url,
+            "kontak": uer_kontak
+        }
+    
+    # Stuur ook e-pos as dit geaktiveer is
+    if stuur_eposse_aktief:
+        with st.spinner("Stuur e-pos na ouer..."):
+            geslaag_mail = stuur_ouer_epos(uer_kontak, leerder, aksie, opvoeder_naam, nota)
+            if geslaag_mail:
+                st.toast(f"📧 E-pos gestuur na {uer_kontak}")
 
     ikoon = "🟢" if punte > 0 else "🔴"
     st.toast(f"{ikoon} {leerder}: {aksie} ({'+' if punte > 0 else ''}{punte})")
@@ -381,16 +387,6 @@ def kanselleer_laaste():
         st.rerun()
 
 st.divider()
-
-# --- SNEL WHATSAPP STUUR BANNER (Indien negatiewe voorval pas aangeteken is) ---
-if st.session_state.laaste_wa_skakel:
-    wa_data = st.session_state.laaste_wa_skakel
-    st.info(f"💬 **Stuur WhatsApp na Ouer van {wa_data['leerder']} ({wa_data['kontak']}):**")
-    st.markdown(
-        f"<a href='{wa_data['url']}' target='_blank' class='wa-button'>📲 Klik hier om WhatsApp oop te maak & te stuur</a>", 
-        unsafe_allow_html=True
-    )
-    st.divider()
 
 # --- SPESIFIEKE NOTA INSET ---
 optionele_nota = st.text_input("📝 Opsionele Opmerking/Nota (Tik hier voor jy 'n knoppie druk):", value="")
@@ -434,6 +430,18 @@ with col_ctrl2:
         st.rerun()
 
 st.divider()
+
+# --- WHATSAPP STUUR BANNER (ONDER-AAN DIE SKERM GEPLAAS) ---
+if st.session_state.laaste_wa_skakel:
+    wa_data = st.session_state.laaste_wa_skakel
+    tipe_ikoon = "🟢" if wa_data['tipe'] == "Positief" else "🔴"
+    
+    st.markdown(f"### {tipe_ikoon} Stuur WhatsApp na Ouer van **{wa_data['leerder']}** ({wa_data['kontak']}):")
+    st.markdown(
+        f"<a href='{wa_data['url']}' target='_self' class='wa-button'>📲 Klik hier om WhatsApp App direk oop te maak ({wa_data['aksie']})</a>", 
+        unsafe_allow_html=True
+    )
+    st.divider()
 
 # --- EXPORT, GRAFIEKE & OPSOMMING ---
 if st.session_state.gedrag_events:
