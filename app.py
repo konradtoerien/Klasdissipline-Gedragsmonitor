@@ -5,6 +5,9 @@ import pytz
 import io
 import gspread
 from google.oauth2.service_account import Credentials
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 st.set_page_config(page_title="Gr.7 KT Klasdissipline", layout="wide")
 
@@ -78,14 +81,11 @@ def get_google_sheet():
         scopes=scope
     )
     client = gspread.authorize(credentials)
-    # Maak die spesifieke sheet oop
     sheet = client.open("Gr.7KT 2026 Gedrag").sheet1
     return sheet
 
 try:
     sheet = get_google_sheet()
-    
-    # Skep opskrifte as die sheet nog heeltemal leeg is
     if len(sheet.get_all_values()) == 0:
         sheet.append_row(["Datum/Tyd", "Klas", "Opvoeder", "Leerder", "Ouer_Epos", "Tipe", "Gedrag", "Punte", "Nota"])
 except Exception as e:
@@ -103,6 +103,51 @@ if "gedrag_events" not in st.session_state:
     st.session_state.gedrag_events = laai_data_van_sheet()
 
 st.title("🏫 Klasdissipline & Gedragsmonitor")
+
+# --- EMAIL KENNISGEWING FUNKSIE ---
+def stuur_ouer_epos(ontvanger_epos, leerder_naam, gedrag, opvoeder, nota=""):
+    """Stuur 'n outomatiese e-pos na die ouer as 'n negatiewe inskrywing gemaak word."""
+    if not ontvanger_epos or "@" not in ontvanger_epos or "voorbeeld.co.za" in ontvanger_epos:
+        st.warning(f"⚠️ Geen geldige e-posadres vir {leerder_naam} gevind nie.")
+        return False
+    
+    try:
+        # SMTP Instellings uit Secrets
+        smtp_server = st.secrets["email"]["smtp_server"]
+        smtp_port = st.secrets["email"]["smtp_port"]
+        sender_email = st.secrets["email"]["sender_email"]
+        sender_password = st.secrets["email"]["sender_password"]
+
+        msg = MIMEMultipart()
+        msg['From'] = f"{opvoeder} <{sender_email}>"
+        msg['To'] = ontvanger_epos
+        msg['Subject'] = f"Gedragskennisgewing: {leerder_naam}"
+
+        body = f"""Beste Ouer,
+
+Hierdie is 'n outomatiese kennisgewing rakende {leerder_naam} in {opvoeder} se klas.
+
+Gedrag Aangemeld: {gedrag}
+Datum/Tyd: {datetime.datetime.now(pytz.timezone('Africa/Johannesburg')).strftime('%Y-%m-%d %H:%M')}
+Opmerking: {nota if nota else 'Geen verdere opmerkings nie.'}
+
+Aanvaar asseblief hierdie kennisgewing ter inligting om ons te help om klasdissipline te handhaaf.
+Vir enige verdere navrae, kontak my gerus by ktoerien@swartlandls.co.za.
+
+Vriendelike groete,
+{opvoeder}
+"""
+        msg.attach(MIMEText(body, 'plain'))
+
+        server = smtplib.SMTP(smtp_server, smtp_port)
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(msg)
+        server.quit()
+        return True
+    except Exception as e:
+        st.error(f"Kon nie e-pos stuur na {ontvanger_epos} nie: {e}")
+        return False
 
 # --- DEFAULT LEERDERLYST MET EPOSSE ---
 default_leerders_met_epos = """Burger Frederick, frederick@voorbeeld.co.za
@@ -137,14 +182,15 @@ Willers Lilly, lilly@voorbeeld.co.za
 Williams Ethan, ethan@voorbeeld.co.za"""
 
 # --- INSTELINGS ---
-with st.expander("⚙️ Klas Instellings & Leerderlys", expanded=False):
-    col_k1, col_k2 = st.columns(2)
+with st.expander("⚙️ Klas Instellings & Ouer E-pos Bestuur", expanded=False):
+    col_k1, col_k2, col_k3 = st.columns([1.5, 1.5, 1])
     klas_naam = col_k1.text_input("Klas", value="Gr.7 KT")
     opvoeder_naam = col_k2.text_input("Opvoeder", value="Mnr. Toerien")
+    stuur_eposse_aktief = col_k3.checkbox("Outomatiese E-posse Aan", value=False)
     
-    raw_leerders = st.text_area("Leerders se Name en Ouer E-posse (Formaat: Naam, Epos):", value=default_leerders_met_epos, height=150)
+    st.markdown("**Opdateer Leerderlyste en Ouer E-posadresse:**")
+    raw_leerders = st.text_area("Formaat: Leerder Naam, ouer_epos@voorbeeld.co.za", value=default_leerders_met_epos, height=180)
     
-    # Parse name en eposadresse
     student_dict = {}
     for line in raw_leerders.split("\n"):
         if "," in line:
@@ -172,31 +218,38 @@ def log_gedrag(leerder, tipe, aksie, punte, nota=""):
         "Nota": nota
     }
     
-    # Voeg toe aan plaaslike geheue
     st.session_state.gedrag_events.append(nuwe_ry)
     
-    # Skryf direk na Google Sheet
+    # Skryf na Google Sheet
     if sheet:
         try:
             sheet.append_row([t_min, klas_naam, opvoeder_naam, leerder, uer_epos, tipe, aksie, punte, nota])
         except Exception as e:
-            st.error(f"Koor nie op te stoor in Google Sheet nie: {e}")
+            st.error(f"Kon nie opstoor in Google Sheet nie: {e}")
     
+    # Outomatiese e-pos stuur vir negatiewe inskrywings
+    if tipe == "Negatief" and stuur_eposse_aktief:
+        with st.spinner("Stuur e-pos na ouer..."):
+            geslaag = stuur_ouer_epos(uer_epos, leerder, aksie, opvoeder_naam, nota)
+            if geslaag:
+                st.toast(f"📧 E-pos gestuur na {uer_epos}")
+
     ikoon = "🟢" if punte > 0 else "🔴"
     st.toast(f"{ikoon} {leerder}: {aksie} ({'+' if punte > 0 else ''}{punte})")
+    st.rerun()
 
 def kanselleer_laaste():
     if st.session_state.gedrag_events:
         laaste = st.session_state.gedrag_events.pop()
-        # Verwyder ook die laaste ry in Google Sheet
         if sheet:
             try:
                 values = sheet.get_all_values()
                 if len(values) > 1:
                     sheet.delete_rows(len(values))
             except Exception as e:
-                st.error(f"Koor nie laaste ry te skrap nie: {e}")
+                st.error(f"Kon nie laaste ry skrap nie: {e}")
         st.toast(f"↩️ Verwyder: {laaste['Leerder']} - {laaste['Gedrag']}")
+        st.rerun()
 
 st.divider()
 
@@ -215,13 +268,11 @@ for leerder in student_dict.keys():
     with c_label:
         st.markdown(f"<div class='student-label'>{leerder}</div>", unsafe_allow_html=True)
         
-    # Positiewe Knoppies (+1)
     if b1.button("🤝 Hulpvaardig", key=f"hulp_{leerder}"): 
         log_gedrag(leerder, "Positief", "Hulpvaardig", 1, optionele_nota)
     if b2.button("🌟 Goeie waardes", key=f"waardes_{leerder}"): 
         log_gedrag(leerder, "Positief", "Goeie waardes", 1, optionele_nota)
         
-    # Negatiewe Knoppies (-1)
     if b3.button("🗣️ Gesels konstant", key=f"gesels_{leerder}"): 
         log_gedrag(leerder, "Negatief", "Gesels konstant", -1, optionele_nota)
     if b4.button("⚠️ Swak dissipline", key=f"dissipline_{leerder}"): 
@@ -240,6 +291,7 @@ with col_ctrl2:
     if st.button("🔄 Herlaai Data vanaf Google Sheets"):
         st.session_state.gedrag_events = laai_data_van_sheet()
         st.toast("✅ Data suksesvol herlaai!")
+        st.rerun()
 
 st.divider()
 
@@ -247,7 +299,11 @@ st.divider()
 if st.session_state.gedrag_events:
     df_events = pd.DataFrame(st.session_state.gedrag_events)
     
-    # Berekende opsommings
+    # Maak seker dat albei kolomme bestaan voor groupby uitgevoer word
+    for col in ["Positief", "Negatief"]:
+        if col not in df_events.columns:
+            df_events[col] = 0
+            
     df_leerder_opsomming = df_events.groupby(["Leerder", "Tipe"]).size().unstack(fill_value=0).reset_index()
     df_punte = df_events.groupby("Leerder")["Punte"].sum().reset_index(name="Totale Gedragspunte")
     df_leerder_finaal = pd.merge(df_leerder_opsomming, df_punte, on="Leerder")
