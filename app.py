@@ -97,13 +97,14 @@ st.markdown("""
         display: inline-block;
         background-color: #25D366;
         color: #ffffff !important;
-        padding: 10px 18px;
-        font-size: 14px;
+        padding: 6px 12px;
+        font-size: 12px;
         font-weight: bold;
         text-decoration: none;
-        border-radius: 6px;
-        margin-top: 5px;
-        box-shadow: 0px 2px 6px rgba(0,0,0,0.3);
+        border-radius: 5px;
+        margin-top: 2px;
+        margin-bottom: 2px;
+        box-shadow: 0px 2px 4px rgba(0,0,0,0.3);
     }
     .wa-button:hover {
         background-color: #128C7E;
@@ -142,8 +143,8 @@ def laai_data_van_sheet():
 if "gedrag_events" not in st.session_state:
     st.session_state.gedrag_events = laai_data_van_sheet()
 
-if "laaste_wa_skakel" not in st.session_state:
-    st.session_state.laaste_wa_skakel = None
+if "laaste_wa_skakels" not in st.session_state:
+    st.session_state.laaste_wa_skakels = []
 
 st.title("🏫 Klasdissipline & Gedragsmonitor")
 
@@ -153,7 +154,6 @@ def skep_whatsapp_skakel(selnommer, leerder_naam, tipe, gedrag, opvoeder, nota="
     if not selnommer:
         return None
     
-    # Formatteer Suid-Afrikaanse nommer na internasionale formaat (27...)
     skoon_nommer = str(selnommer).replace(" ", "").replace("-", "").strip()
     if skoon_nommer.startswith("0"):
         skoon_nommer = "27" + skoon_nommer[1:]
@@ -161,7 +161,6 @@ def skep_whatsapp_skakel(selnommer, leerder_naam, tipe, gedrag, opvoeder, nota="
         skoon_nommer = skoon_nommer[1:]
 
     tyd_nou = datetime.datetime.now(pytz.timezone('Africa/Johannesburg')).strftime('%Y-%m-%d %H:%M')
-    
     ikoon = "🌟" if tipe == "Positief" else "⚠️"
     
     boodskap = f"""Beste Ouer,
@@ -176,12 +175,10 @@ Vriendelike groete,
 {opvoeder}"""
 
     encoded_boodskap = urllib.parse.quote(boodskap)
-    # whatsapp:// Protocol skakel poog om die app direk oop te maak op Windows/Mac/iOS/Android
     return f"whatsapp://send?phone={skoon_nommer}&text={encoded_boodskap}"
 
-# --- EMAIL KENNISGEWING FUNKSIE (GRATIS VIA SMTP) ---
+# --- EMAIL KENNISGEWING FUNKSIE ---
 def stuur_ouer_epos(ontvanger_epos, leerder_naam, gedrag, opvoeder, nota=""):
-    """Stuur 'n outomatiese e-pos na die ouer as 'n inskrywing gemaak word."""
     if not ontvanger_epos or "@" not in ontvanger_epos or "voorbeeld.co.za" in ontvanger_epos:
         return False
     
@@ -227,13 +224,11 @@ def genereer_leerder_pdf(leerder_naam, df_leerder_events, opvoeder_naam, klas_na
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 16)
     
-    # Opskrif
     pdf.cell(0, 10, f"Gedragsverslag: {leerder_naam}", new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.set_font("Helvetica", "", 10)
     pdf.cell(0, 6, f"Klas: {klas_naam} | Opvoeder: {opvoeder_naam} | Datum: {datetime.date.today().strftime('%Y-%m-%d')}", new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.ln(8)
     
-    # Opsomming Stat
     pos = len(df_leerder_events[df_leerder_events["Tipe"] == "Positief"])
     neg = len(df_leerder_events[df_leerder_events["Tipe"] == "Negatief"])
     punte = df_leerder_events["Punte"].sum()
@@ -242,7 +237,6 @@ def genereer_leerder_pdf(leerder_naam, df_leerder_events, opvoeder_naam, klas_na
     pdf.cell(0, 6, f"Totaal Positief: {pos} | Totaal Negatief: {neg} | Totale Punte: {punte}", new_x="LMARGIN", new_y="NEXT")
     pdf.ln(4)
     
-    # Tabel Opskrifte
     pdf.set_fill_color(240, 240, 240)
     pdf.set_font("Helvetica", "B", 10)
     pdf.cell(40, 8, "Datum/Tyd", border=1, fill=True)
@@ -251,7 +245,6 @@ def genereer_leerder_pdf(leerder_naam, df_leerder_events, opvoeder_naam, klas_na
     pdf.cell(15, 8, "Punte", border=1, fill=True)
     pdf.cell(65, 8, "Nota", border=1, fill=True, new_x="LMARGIN", new_y="NEXT")
     
-    # Tabel Data
     pdf.set_font("Helvetica", "", 9)
     for _, row in df_leerder_events.iterrows():
         dt = str(row.get("Datum/Tyd", ""))[:16]
@@ -323,53 +316,58 @@ with st.expander("⚙️ Klas Instellings & Ouer Kontak Bestuur", expanded=False
             if naam:
                 student_dict[naam] = kontak
 
-# Funksie om voorvalle te registreer
-def log_gedrag(leerder, tipe, aksie, punte, nota=""):
+# Funksie om voorvalle vir 'n LYS leerders te registreer
+def log_gedrag_massa(leerders_lys, tipe, aksie, punte, nota=""):
+    if not leerders_lys:
+        st.warning("⚠️ Geen leerders is gekies nie!")
+        return
+
     sa_time = datetime.datetime.now(pytz.timezone('Africa/Johannesburg'))
     t_min = sa_time.strftime("%Y-%m-%d %H:%M:%S")
-    uer_kontak = student_dict.get(leerder, "")
     
-    nuwe_ry = {
-        "Datum/Tyd": t_min,
-        "Klas": klas_naam,
-        "Opvoeder": opvoeder_naam,
-        "Leerder": leerder,
-        "Ouer_Kontak": uer_kontak,
-        "Tipe": tipe,
-        "Gedrag": aksie,
-        "Punte": punte,
-        "Nota": nota
-    }
+    nuwe_wa_skakels = []
     
-    st.session_state.gedrag_events.append(nuwe_ry)
-    
-    # Skryf na Google Sheet
-    if sheet:
-        try:
-            sheet.append_row([t_min, klas_naam, opvoeder_naam, leerder, uer_kontak, tipe, aksie, punte, nota])
-        except Exception as e:
-            st.error(f"Kon nie opstoor in Google Sheet nie: {e}")
-    
-    # Genereer WhatsApp-skakel vir ALBEI (Positief en Negatief)
-    wa_url = skep_whatsapp_skakel(uer_kontak, leerder, tipe, aksie, opvoeder_naam, nota)
-    if wa_url:
-        st.session_state.laaste_wa_skakel = {
-            "leerder": leerder,
-            "tipe": tipe,
-            "aksie": aksie,
-            "url": wa_url,
-            "kontak": uer_kontak
+    for leerder in leerders_lys:
+        uer_kontak = student_dict.get(leerder, "")
+        nuwe_ry = {
+            "Datum/Tyd": t_min,
+            "Klas": klas_naam,
+            "Opvoeder": opvoeder_naam,
+            "Leerder": leerder,
+            "Ouer_Kontak": uer_kontak,
+            "Tipe": tipe,
+            "Gedrag": aksie,
+            "Punte": punte,
+            "Nota": nota
         }
-    
-    # Stuur ook e-pos as dit geaktiveer is
-    if stuur_eposse_aktief:
-        with st.spinner("Stuur e-pos na ouer..."):
-            geslaag_mail = stuur_ouer_epos(uer_kontak, leerder, aksie, opvoeder_naam, nota)
-            if geslaag_mail:
-                st.toast(f"📧 E-pos gestuur na {uer_kontak}")
+        
+        st.session_state.gedrag_events.append(nuwe_ry)
+        
+        # Skryf na Google Sheet
+        if sheet:
+            try:
+                sheet.append_row([t_min, klas_naam, opvoeder_naam, leerder, uer_kontak, tipe, aksie, punte, nota])
+            except Exception as e:
+                st.error(f"Kon nie opstoor in Google Sheet vir {leerder}: {e}")
+        
+        # WhatsApp Skakels
+        wa_url = skep_whatsapp_skakel(uer_kontak, leerder, tipe, aksie, opvoeder_naam, nota)
+        if wa_url:
+            nuwe_wa_skakels.append({
+                "leerder": leerder,
+                "tipe": tipe,
+                "aksie": aksie,
+                "url": wa_url,
+                "kontak": uer_kontak
+            })
+        
+        # E-posse
+        if stuur_eposse_aktief:
+            stuur_ouer_epos(uer_kontak, leerder, aksie, opvoeder_naam, nota)
 
+    st.session_state.laaste_wa_skakels = nuwe_wa_skakels
     ikoon = "🟢" if punte > 0 else "🔴"
-    st.toast(f"{ikoon} {leerder}: {aksie} ({'+' if punte > 0 else ''}{punte})")
+    st.toast(f"{ikoon} {len(leerders_lys)} Leerder(s) geregistreer vir: {aksie}")
     st.rerun()
 
 def kanselleer_laaste():
@@ -382,7 +380,7 @@ def kanselleer_laaste():
                     sheet.delete_rows(len(values))
             except Exception as e:
                 st.error(f"Kon nie laaste ry skrap nie: {e}")
-        st.session_state.laaste_wa_skakel = None
+        st.session_state.laaste_wa_skakels = []
         st.toast(f"↩️ Verwyder: {laaste['Leerder']} - {laaste['Gedrag']}")
         st.rerun()
 
@@ -393,8 +391,33 @@ optionele_nota = st.text_input("📝 Opsionele Opmerking/Nota (Tik hier voor jy 
 
 st.divider()
 
-# --- LEERDER ROSTER & GEDRAGSKNOPPIES ---
-st.markdown("#### 🏃 LEERDER GEDRAGSKNOPPIES")
+# --- MASSAKIESER (MULTI-SELECT REGMERKIES) ---
+st.markdown("#### 👥 GROEP / MASSA LEERDER KIESER")
+gekoose_groep = st.multiselect(
+    "Merk/Kies een of meer leerders vir dieselfde inskrywing:",
+    options=sorted(list(student_dict.keys())),
+    help="Kies verskeie leerders as jy vir almal gelyktydig dieselfde positiewe of negatiewe punte wil gee."
+)
+
+if gekoose_groep:
+    st.markdown(f"**Pas aksie toe op {len(gekoose_groep)} gekose leerder(s):**")
+    m_b1, m_b2, m_b3, m_b4, m_b5 = st.columns(5)
+    
+    if m_b1.button("🤝 Hulpvaardig (+1)", key="massa_hulp"):
+        log_gedrag_massa(gekoose_groep, "Positief", "Hulpvaardig", 1, optionele_nota)
+    if m_b2.button("🌟 Goeie waardes (+1)", key="massa_waardes"):
+        log_gedrag_massa(gekoose_groep, "Positief", "Goeie waardes", 1, optionele_nota)
+    if m_b3.button("🗣️ Gesels konstant (-1)", key="massa_gesels"):
+        log_gedrag_massa(gekoose_groep, "Negatief", "Gesels konstant", -1, optionele_nota)
+    if m_b4.button("⚠️ Swak dissipline (-1)", key="massa_dissipline"):
+        log_gedrag_massa(gekoose_groep, "Negatief", "Swak dissipline", -1, optionele_nota)
+    if m_b5.button("🚩 Waarskuwing (-1)", key="massa_waarsk"):
+        log_gedrag_massa(gekoose_groep, "Negatief", "Waarskuwing", -1, optionele_nota)
+
+st.divider()
+
+# --- INDIVIDUELE LEERDER ROSTER & GEDRAGSKNOPPIES ---
+st.markdown("#### 🏃 INDIVIDUELE LEERDER SKAKELS")
 st.caption("🟢 **Positief (+1):** Hulpvaardig | Goeie waardes  ──  🔴 **Negatief (-1):** Gesels konstant | Swak dissipline | Waarskuwing")
 
 for leerder in student_dict.keys():
@@ -404,16 +427,16 @@ for leerder in student_dict.keys():
         st.markdown(f"<div class='student-label'>{leerder}</div>", unsafe_allow_html=True)
         
     if b1.button("🤝 Hulpvaardig", key=f"hulp_{leerder}"): 
-        log_gedrag(leerder, "Positief", "Hulpvaardig", 1, optionele_nota)
+        log_gedrag_massa([leerder], "Positief", "Hulpvaardig", 1, optionele_nota)
     if b2.button("🌟 Goeie waardes", key=f"waardes_{leerder}"): 
-        log_gedrag(leerder, "Positief", "Goeie waardes", 1, optionele_nota)
+        log_gedrag_massa([leerder], "Positief", "Goeie waardes", 1, optionele_nota)
         
     if b3.button("🗣️ Gesels konstant", key=f"gesels_{leerder}"): 
-        log_gedrag(leerder, "Negatief", "Gesels konstant", -1, optionele_nota)
+        log_gedrag_massa([leerder], "Negatief", "Gesels konstant", -1, optionele_nota)
     if b4.button("⚠️ Swak dissipline", key=f"dissipline_{leerder}"): 
-        log_gedrag(leerder, "Negatief", "Swak dissipline", -1, optionele_nota)
+        log_gedrag_massa([leerder], "Negatief", "Swak dissipline", -1, optionele_nota)
     if b5.button("🚩 Waarskuwing", key=f"waarsk_{leerder}"): 
-        log_gedrag(leerder, "Negatief", "Waarskuwing", -1, optionele_nota)
+        log_gedrag_massa([leerder], "Negatief", "Waarskuwing", -1, optionele_nota)
 
 st.divider()
 
@@ -425,29 +448,28 @@ with col_ctrl1:
 with col_ctrl2:
     if st.button("🔄 Herlaai Data vanaf Google Sheets"):
         st.session_state.gedrag_events = laai_data_van_sheet()
-        st.session_state.laaste_wa_skakel = None
+        st.session_state.laaste_wa_skakels = []
         st.toast("✅ Data suksesvol herlaai!")
         st.rerun()
 
 st.divider()
 
 # --- WHATSAPP STUUR BANNER (ONDER-AAN DIE SKERM GEPLAAS) ---
-if st.session_state.laaste_wa_skakel:
-    wa_data = st.session_state.laaste_wa_skakel
-    tipe_ikoon = "🟢" if wa_data['tipe'] == "Positief" else "🔴"
-    
-    st.markdown(f"### {tipe_ikoon} Stuur WhatsApp na Ouer van **{wa_data['leerder']}** ({wa_data['kontak']}):")
-    st.markdown(
-        f"<a href='{wa_data['url']}' target='_self' class='wa-button'>📲 Klik hier om WhatsApp App direk oop te maak ({wa_data['aksie']})</a>", 
-        unsafe_allow_html=True
-    )
+if st.session_state.laaste_wa_skakels:
+    st.markdown("### 📲 Stuur WhatsApp Kennisgewings vir Laaste Inskrywings:")
+    for wa_data in st.session_state.laaste_wa_skakels:
+        tipe_ikoon = "🟢" if wa_data['tipe'] == "Positief" else "🔴"
+        st.markdown(
+            f"{tipe_ikoon} **{wa_data['leerder']}** ({wa_data['kontak']}): "
+            f"<a href='{wa_data['url']}' target='_self' class='wa-button'>Stuur WhatsApp ({wa_data['aksie']})</a>", 
+            unsafe_allow_html=True
+        )
     st.divider()
 
 # --- EXPORT, GRAFIEKE & OPSOMMING ---
 if st.session_state.gedrag_events:
     df_events = pd.DataFrame(st.session_state.gedrag_events)
     
-    # Veiligheidskontrole vir kolomme
     df_pivot = df_events.groupby(["Leerder", "Tipe"]).size().unstack(fill_value=0)
     for col in ["Positief", "Negatief"]:
         if col not in df_pivot.columns:
