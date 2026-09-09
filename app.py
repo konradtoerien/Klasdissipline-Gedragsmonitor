@@ -4,6 +4,7 @@ import datetime
 import pytz
 import io
 import os
+import zipfile
 import urllib.parse
 import gspread
 from google.oauth2.service_account import Credentials
@@ -267,6 +268,18 @@ def genereer_leerder_pdf(leerder_naam, df_leerder_events, opvoeder_naam, klas_na
     
     return bytes(pdf.output())
 
+# --- FUNKSIE OM ALLE LEERDERS SE PDF'S IN 'N ZIP TE PAK ---
+def genereer_alle_leerders_zip(df_all_events, student_list, opvoeder_naam, klas_naam):
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+        for leerder in student_list:
+            df_spec = df_all_events[df_all_events["Leerder"] == leerder]
+            if not df_spec.empty:
+                pdf_bytes = genereer_leerder_pdf(leerder, df_spec, opvoeder_naam, klas_naam)
+                skoon_naam = leerder.replace(" ", "_").replace(",", "")
+                zip_file.writestr(f"{skoon_naam}_Gedragsverslag.pdf", pdf_bytes)
+    return zip_buffer.getvalue()
+
 # --- DEFAULT LEERDERLYST MET BEIDE SELNOMMER & EPOS ---
 default_leerders_met_kontak = """Burger Frederick, 0825442210, cornel.loubser@gmail.com
 Carelse Anna-Marie, 0716825677, carelsequinten@gmail.com
@@ -507,7 +520,7 @@ if st.session_state.gedrag_events:
     t1, t2, t3, t4, t5 = st.tabs([
         "🏃 Opsomming per Leerder", 
         "📈 Grafieke & Analise", 
-        "📄 PDF Leerder-Verslag", 
+        "📄 PDF Leerder-Verslae", 
         "📋 Alle Voorvalle (Tydlyn)", 
         "⚠️ Ouer-Verslag Data"
     ])
@@ -545,21 +558,37 @@ if st.session_state.gedrag_events:
             st.plotly_chart(fig_pie, use_container_width=True)
             
     with t3:
-        st.markdown("**Genereer Individuele PDF Verslag vir Ouers**")
-        gekoose_leerder = st.selectbox("Kies 'n Leerder:", options=sorted(list(student_dict.keys())))
+        st.markdown("### 📄 Genereer PDF Verslae vir Ouers")
         
-        df_spec_student = df_events[df_events["Leerder"] == gekoose_leerder]
+        pdf_col1, pdf_col2 = st.columns(2)
         
-        if not df_spec_student.empty:
-            pdf_bytes = genereer_leerder_pdf(gekoose_leerder, df_spec_student, opvoeder_naam, klas_naam)
+        with pdf_col1:
+            st.markdown("#### 👤 Individuele Leerder PDF")
+            gekoose_leerder = st.selectbox("Kies 'n Leerder:", options=sorted(list(student_dict.keys())))
+            df_spec_student = df_events[df_events["Leerder"] == gekoose_leerder]
+            
+            if not df_spec_student.empty:
+                pdf_bytes = genereer_leerder_pdf(gekoose_leerder, df_spec_student, opvoeder_naam, klas_naam)
+                st.download_button(
+                    label=f"📄 Laai PDF Verslag af vir {gekoose_leerder}",
+                    data=pdf_bytes,
+                    file_name=f"{gekoose_leerder}_Gedragsverslag.pdf",
+                    mime="application/pdf"
+                )
+            else:
+                st.info(f"Geen inskrywings vir {gekoose_leerder} om 'n PDF te genereer nie.")
+
+        with pdf_col2:
+            st.markdown("#### 📦 Alle Leerders se PDF's (ZIP Aflaai)")
+            st.caption("Laai al die leerders se individuele PDF-verslae gelyktydig af as 'n ZIP-lêer.")
+            
+            zip_bytes = genereer_alle_leerders_zip(df_events, sorted(list(student_dict.keys())), opvoeder_naam, klas_naam)
             st.download_button(
-                label=f"📄 Laai PDF Verslag af vir {gekoose_leerder}",
-                data=pdf_bytes,
-                file_name=f"{gekoose_leerder}_Gedragsverslag.pdf",
-                mime="application/pdf"
+                label=f"📦 Laai ALLE Leerders se PDF's Af (.ZIP)",
+                data=zip_bytes,
+                file_name=f"{klas_naam}_Alle_Gedragsverslae.zip",
+                mime="application/zip"
             )
-        else:
-            st.info(f"Geen inskrywings vir {gekoose_leerder} om 'n PDF te genereer nie.")
 
     with t4:
         st.dataframe(df_events, use_container_width=True)
