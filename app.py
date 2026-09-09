@@ -128,7 +128,7 @@ def get_google_sheet():
 try:
     sheet = get_google_sheet()
     if len(sheet.get_all_values()) == 0:
-        sheet.append_row(["Datum/Tyd", "Klas", "Opvoeder", "Leerder", "Ouer_Kontak", "Tipe", "Gedrag", "Punte", "Nota"])
+        sheet.append_row(["Datum/Tyd", "Klas", "Opvoeder", "Leerder", "Ouer_Sel", "Ouer_Epos", "Tipe", "Gedrag", "Punte", "Nota"])
 except Exception as e:
     st.error(f"Fout met verbinding na Google Sheets: {e}")
     sheet = None
@@ -150,8 +150,8 @@ st.title("🏫 Klasdissipline & Gedragsmonitor")
 
 # --- GRATIS WHATSAPP SKAKEL GENERATOR ---
 def skep_whatsapp_skakel(selnommer, leerder_naam, tipe, gedrag, opvoeder, nota=""):
-    """Genereer 'n whatsapp:// of wa.me skakel wat direk die WhatsApp app oopmaak."""
-    if not selnommer:
+    """Genereer 'n whatsapp:// skakel wat die WhatsApp app direk oopmaak."""
+    if not selnommer or not str(selnommer).strip():
         return None
     
     skoon_nommer = str(selnommer).replace(" ", "").replace("-", "").strip()
@@ -265,56 +265,59 @@ def genereer_leerder_pdf(leerder_naam, df_leerder_events, opvoeder_naam, klas_na
     
     return bytes(pdf.output())
 
-# --- DEFAULT LEERDERLYST MET KONTAKINLIGTING ---
-default_leerders_met_kontak = """Burger Frederick, 0821234567
-Carelse Anna-Marie, 0821234568
-Carstens Simon, 0821234569
-Claassen JJ, 0821234570
-Coetzee Zoë, 0821234571
-Conradie Christel, 0821234572
-De Lange Chantenique, 0821234573
-Geldenhuys Lani, 0821234574
-Haak Wilrich, 0821234575
-Jenneke Kian, 0821234576
-Keffers Phoenix, 0821234577
-Krugel Willem, 0821234578
-Lakey Lenvan, 0821234579
-Lewies Jolynn, 0821234580
-Mostert Caleb, 0821234581
-Munnik Aniecke, 0821234582
-Nackerdien Fariah, 0821234583
-Roscher Lianke, 0821234584
-Smith Tayo, 0821234585
-Strydom El-Jay, 0821234586
-Swanepoel Henko, 0821234587
-Taylor Theart, 0821234588
-Van der Westhuizen Laylah, 0821234589
-Van Tonder Dia, 0821234590
-Van Wyk Carah, 0821234591
-Vogel Jaco, 0821234592
-Walters Yvonne, 0821234593
-Wijgergangs Jayden, 0821234594
-Willers Lilly, 0821234595
-Williams Ethan, 0821234596"""
+# --- DEFAULT LEERDERLYST MET BEIDE SELNOMMER & EPOS ---
+default_leerders_met_kontak = """Burger Frederick, 0821234567, frederick@voorbeeld.co.za
+Carelse Anna-Marie, 0821234568, annamarie@voorbeeld.co.za
+Carstens Simon, 0821234569, simon@voorbeeld.co.za
+Claassen JJ, 0829529901, jmhclaassen@gmail.com
+Coetzee Zoë, 0625236510, chenitavdw@gmail.com
+Conradie Christel, 0829216737, marian.conradie@gmail.com
+De Lange Chantenique, 0821234573, chantenique@voorbeeld.co.za
+Geldenhuys Lani, 0736217513, Bkskoonmaakmiddels@gmail.com
+Haak Wilrich, 0737101754, stefaniehaak3@gmail.com
+Jenneke Kian, 0821234576, kian@voorbeeld.co.za
+Keffers Phoenix, 0821234577, phoenix@voorbeeld.co.za
+Krugel Willem, 0821234578, willem@voorbeeld.co.za
+Lakey Lenvan, 0821234579, lenvan@voorbeeld.co.za
+Lewies Jolynn, 0821234580, jolynn@voorbeeld.co.za
+Mostert Caleb, 0821234581, caleb@voorbeeld.co.za
+Munnik Aniecke, 0821234582, aniecke@voorbeeld.co.za
+Nackerdien Fariah, 0739412620, Kautharnackerdien8@gmail.com
+Roscher Lianke, 0823427576, nicolivanwyk@yahoo.com
+Smith Tayo, 0821234585, tayo@voorbeeld.co.za
+Strydom El-Jay, 0730955552, Fredelenestrydom21@gmail.com
+Swanepoel Henko, 0832290356, anzkeswanepoel@gmail.com
+Taylor Theart, 0766546735, beofox@gmail.com
+Van der Westhuizen Laylah, 0821234589, laylah@voorbeeld.co.za
+Van Tonder Dia, 0821234590, dia@voorbeeld.co.za
+Van Wyk Carah, 0824251990, cyrajadevanwyk123@gmail.com
+Vogel Jaco, 0764160926, Janien@kbooks.co.za
+Walters Yvonne, 0821234593, yvonne@voorbeeld.co.za
+Wijgergangs Jayden, 0821234594, jayden@voorbeeld.co.za
+Willers Lilly, 0821234595, lilly@voorbeeld.co.za
+Williams Ethan, 0821234596, ethan@voorbeeld.co.za"""
 
 # --- INSTELINGS ---
 with st.expander("⚙️ Klas Instellings & Ouer Kontak Bestuur", expanded=False):
-    col_k1, col_k2, col_k3 = st.columns([1.5, 1.5, 1])
+    col_k1, col_k2, col_k3, col_k4 = st.columns([1.5, 1.5, 1, 1])
     klas_naam = col_k1.text_input("Klas", value="Gr.7 KT")
     opvoeder_naam = col_k2.text_input("Opvoeder", value="Mnr. Toerien")
-    stuur_eposse_aktief = col_k3.checkbox("Outomatiese E-posse Aan (Gratis)", value=False)
     
-    st.markdown("**Opdateer Leerderlyste en Ouer Selfoonnommers / E-posse:**")
-    raw_leerders = st.text_area("Formaat: Leerder Naam, 0821234567 (of ouer_epos@voorbeeld.co.za)", value=default_leerders_met_kontak, height=180)
+    # Skakelaars vir WhatsApp en E-posse
+    stuur_wa_aktief = col_k3.checkbox("Skep WhatsApp Skakels", value=True)
+    stuur_eposse_aktief = col_k4.checkbox("Stuur Outomatiese E-posse", value=False)
+    
+    st.markdown("**Opdateer Leerderlyste (Formaat: Naam, Selfoonnommer, E-posadres):**")
+    raw_leerders = st.text_area("Leerder lys:", value=default_leerders_met_kontak, height=200)
     
     student_dict = {}
     for line in raw_leerders.split("\n"):
-        if "," in line:
-            parts = line.split(",")
-            naam = parts[0].strip()
-            kontak = parts[1].strip()
-            if naam:
-                student_dict[naam] = kontak
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) >= 1 and parts[0]:
+            naam = parts[0]
+            sel = parts[1] if len(parts) > 1 else ""
+            epos = parts[2] if len(parts) > 2 else ""
+            student_dict[naam] = {"sel": sel, "epos": epos}
 
 # Funksie om voorvalle vir 'n LYS leerders te registreer
 def log_gedrag_massa(leerders_lys, tipe, aksie, punte, nota=""):
@@ -328,13 +331,17 @@ def log_gedrag_massa(leerders_lys, tipe, aksie, punte, nota=""):
     nuwe_wa_skakels = []
     
     for leerder in leerders_lys:
-        uer_kontak = student_dict.get(leerder, "")
+        kontak_info = student_dict.get(leerder, {"sel": "", "epos": ""})
+        uer_sel = kontak_info["sel"]
+        uer_epos = kontak_info["epos"]
+        
         nuwe_ry = {
             "Datum/Tyd": t_min,
             "Klas": klas_naam,
             "Opvoeder": opvoeder_naam,
             "Leerder": leerder,
-            "Ouer_Kontak": uer_kontak,
+            "Ouer_Sel": uer_sel,
+            "Ouer_Epos": uer_epos,
             "Tipe": tipe,
             "Gedrag": aksie,
             "Punte": punte,
@@ -346,24 +353,25 @@ def log_gedrag_massa(leerders_lys, tipe, aksie, punte, nota=""):
         # Skryf na Google Sheet
         if sheet:
             try:
-                sheet.append_row([t_min, klas_naam, opvoeder_naam, leerder, uer_kontak, tipe, aksie, punte, nota])
+                sheet.append_row([t_min, klas_naam, opvoeder_naam, leerder, uer_sel, uer_epos, tipe, aksie, punte, nota])
             except Exception as e:
                 st.error(f"Kon nie opstoor in Google Sheet vir {leerder}: {e}")
         
-        # WhatsApp Skakels
-        wa_url = skep_whatsapp_skakel(uer_kontak, leerder, tipe, aksie, opvoeder_naam, nota)
-        if wa_url:
-            nuwe_wa_skakels.append({
-                "leerder": leerder,
-                "tipe": tipe,
-                "aksie": aksie,
-                "url": wa_url,
-                "kontak": uer_kontak
-            })
+        # Skep WhatsApp Skakels slegs as die skakelaar AAN is én daar 'n nommer is
+        if stuur_wa_aktief and uer_sel:
+            wa_url = skep_whatsapp_skakel(uer_sel, leerder, tipe, aksie, opvoeder_naam, nota)
+            if wa_url:
+                nuwe_wa_skakels.append({
+                    "leerder": leerder,
+                    "tipe": tipe,
+                    "aksie": aksie,
+                    "url": wa_url,
+                    "kontak": uer_sel
+                })
         
-        # E-posse
-        if stuur_eposse_aktief:
-            stuur_ouer_epos(uer_kontak, leerder, aksie, opvoeder_naam, nota)
+        # Stuur E-posse slegs as die skakelaar AAN is én daar 'n e-posadres is
+        if stuur_eposse_aktief and uer_epos:
+            stuur_ouer_epos(uer_epos, leerder, aksie, opvoeder_naam, nota)
 
     st.session_state.laaste_wa_skakels = nuwe_wa_skakels
     ikoon = "🟢" if punte > 0 else "🔴"
