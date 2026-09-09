@@ -57,12 +57,34 @@ st.markdown("""
         text-overflow: ellipsis !important;
     }
 
-    /* Cursor Hover effek */
+    /* Cursor Hover effek vir gewone knoppies */
     .stButton>button:hover {
         background-color: #FFD700 !important;
         color: #002147 !important;
         transform: scale(1.02) !important;
         box-shadow: 0px 0px 8px rgba(255, 215, 0, 0.7) !important;
+        cursor: pointer !important;
+    }
+
+    /* Spesiaal ingestelde styl vir Aflaai/Download Knoppies sodat dit DUIDELIK leesbaar is */
+    .stDownloadButton>button {
+        width: 100% !important;
+        background-color: #FFD700 !important;
+        color: #002147 !important;
+        font-size: 13px !important;
+        font-weight: bold !important;
+        border: 2px solid #ffffff !important;
+        border-radius: 6px !important;
+        padding: 6px 12px !important;
+        height: auto !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    .stDownloadButton>button:hover {
+        background-color: #ffffff !important;
+        color: #002147 !important;
+        transform: scale(1.02) !important;
+        box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.8) !important;
         cursor: pointer !important;
     }
 
@@ -409,8 +431,8 @@ if gekoose_groep:
 
 st.divider()
 
-# --- KLASREKENAAR RASTER (5 KOLOMME VIR 6 RYE IS SPASIËRING OPTIMAAL) ---
-st.markdown("#### 🏃 KLASLEERDERS RASTER (5 Kolomme x 6 Rye)")
+# --- KLASLEERDERS RASTER ---
+st.markdown("#### 🏃 KLASLEERDERS")
 st.caption("💡 Kliek op enige leerder se naam om die Pop-Up venster oop te maak.")
 
 leerders_lys_gesorteer = sorted(list(student_dict.keys()))
@@ -448,7 +470,6 @@ if st.session_state.laaste_wa_skakels:
             st.session_state.laaste_wa_skakels = []
             st.rerun()
             
-    # Vertoon en verwyder individuele knoppies
     oorblewende_skakels = []
     for wa_data in st.session_state.laaste_wa_skakels:
         tipe_ikoon = "🟢" if wa_data['tipe'] == "Positief" else "🔴"
