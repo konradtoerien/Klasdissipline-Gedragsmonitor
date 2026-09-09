@@ -3,6 +3,7 @@ import pandas as pd
 import datetime
 import pytz
 import io
+import os
 import urllib.parse
 import gspread
 from google.oauth2.service_account import Credentials
@@ -23,7 +24,7 @@ st.markdown("""
     }
     
     .stAppViewMain {
-        padding-top: 10px !important;
+        padding-top: 5px !important;
     }
 
     .stApp {
@@ -45,12 +46,16 @@ st.markdown("""
         width: 100%;
         background-color: #001530 !important;
         color: #FFD700 !important;
-        font-size: 13px !important;
+        font-size: 11px !important;
         font-weight: bold !important;
         border: 1px solid #FFD700 !important;
         border-radius: 6px !important;
-        padding: 6px 10px !important;
+        padding: 4px 6px !important;
+        height: 36px !important;
         transition: all 0.2s ease-in-out !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
     }
 
     /* Cursor Hover effek */
@@ -58,31 +63,21 @@ st.markdown("""
         background-color: #FFD700 !important;
         color: #002147 !important;
         transform: scale(1.02) !important;
-        box-shadow: 0px 0px 10px rgba(255, 215, 0, 0.7) !important;
+        box-shadow: 0px 0px 8px rgba(255, 215, 0, 0.7) !important;
         cursor: pointer !important;
     }
 
     h1, h2, h3, h4, label, p {
         color: #ffffff !important;
-        margin-bottom: 0.2rem !important;
-    }
-
-    /* Student Kaartjie Styl vir Klasrekenaar Raster */
-    .student-card {
-        background-color: #001530;
-        border: 1px solid #FFD700;
-        border-radius: 8px;
-        padding: 8px 12px;
-        margin-bottom: 8px;
-        text-align: center;
+        margin-bottom: 0.1rem !important;
     }
 
     .app-footer {
         text-align: center;
         color: #FFD700 !important;
         font-size: 11px;
-        padding: 15px 0px 5px 0px;
-        margin-top: 20px;
+        padding: 10px 0px 5px 0px;
+        margin-top: 15px;
         border-top: 1px solid #FFD700;
     }
 
@@ -91,8 +86,8 @@ st.markdown("""
         display: inline-block;
         background-color: #25D366;
         color: #ffffff !important;
-        padding: 6px 12px;
-        font-size: 12px;
+        padding: 5px 10px;
+        font-size: 11px;
         font-weight: bold;
         text-decoration: none;
         border-radius: 5px;
@@ -141,13 +136,17 @@ if "laaste_wa_skakels" not in st.session_state:
     st.session_state.laaste_wa_skakels = []
 
 # --- KOPSTUK MET LAERSKOOL SWARTLAND TEMA & LOGO ---
-col_logo, col_title = st.columns([1, 5])
+col_logo, col_title = st.columns([1, 6])
 with col_logo:
-    # Laerskool Swartland Amptelike Logo URL
-    st.image("https://swartlandls.co.za/wp-content/uploads/2021/04/swartland-logo.png", width=110)
+    # Kyk of die logo plaaslik bestaan, anders gebruik gehuisvesde prent
+    logo_pad = "swartland_logo.png"
+    if os.path.exists(logo_pad):
+        st.image(logo_pad, width=90)
+    else:
+        st.image("https://raw.githubusercontent.com/streamlit/st-image/main/images/cat.jpg", width=90) # Kan vervang word of plaaslik gestoor word
 with col_title:
-    st.markdown("<h1 style='color: #FFD700 !important; font-size: 28px; margin-top: 10px;'>LAERSKOOL SWARTLAND</h1>", unsafe_allow_html=True)
-    st.markdown("<h3 style='color: #ffffff !important; font-size: 18px;'>🏫 Gr.7 KT Klasdissipline & Gedragsmonitor</h3>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color: #FFD700 !important; font-size: 26px; margin-top: 5px;'>LAERSKOOL SWARTLAND</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color: #ffffff !important; font-size: 16px;'>🏫 Gr.7 KT Klasdissipline & Gedragsmonitor</h3>", unsafe_allow_html=True)
 
 st.divider()
 
@@ -361,6 +360,7 @@ def log_gedrag_massa(leerders_lys, tipe, aksie, punte, nota=""):
             wa_url = skep_whatsapp_skakel(uer_sel, leerder, tipe, aksie, opvoeder_naam, nota)
             if wa_url:
                 nuwe_wa_skakels.append({
+                    "id": f"{leerder}_{datetime.datetime.now().timestamp()}",
                     "leerder": leerder,
                     "tipe": tipe,
                     "aksie": aksie,
@@ -430,15 +430,15 @@ if gekoose_groep:
 
 st.divider()
 
-# --- KLASREKENAAR RASTER (3 KOLOMME VIR OPTIMALE SPASIËRING) ---
-st.markdown("#### 🏃 KLASLEERDERS RASTER")
-st.caption("💡 Kliek op enige leerder se naam om 'n Pop-Up venster oop te maak vir inskrywings.")
+# --- KLASREKENAAR RASTER (5 KOLOMME VIR 6 RYE IS SPASIËRING OPTIMAAL) ---
+st.markdown("#### 🏃 KLASLEERDERS RASTER (5 Kolomme x 6 Rye)")
+st.caption("💡 Kliek op enige leerder se naam om die Pop-Up venster oop te maak.")
 
 leerders_lys_gesorteer = sorted(list(student_dict.keys()))
-cols = st.columns(3) # 3 Kolomme vir Landscape Klasrekenaar skerms
+cols = st.columns(5) # Presies 5 Kolomme vir 6 Rye
 
 for idx, leerder in enumerate(leerders_lys_gesorteer):
-    col_target = cols[idx % 3]
+    col_target = cols[idx % 5]
     with col_target:
         if st.button(f"👤 {leerder}", key=f"btn_card_{leerder}"):
             open_gedrag_dialog([leerder])
@@ -459,9 +459,16 @@ with col_ctrl2:
 
 st.divider()
 
-# --- WHATSAPP STUUR BANNER (ONDER-AAN DIE SKERM GEPLAAS) ---
+# --- WHATSAPP STUUR BANNER MET SKOONMAAK OPSIE ---
 if st.session_state.laaste_wa_skakels:
-    st.markdown("### 📲 Stuur WhatsApp Kennisgewings vir Laaste Inskrywings:")
+    col_wa_hdr, col_wa_clr = st.columns([4, 1])
+    with col_wa_hdr:
+        st.markdown("### 📲 Stuur WhatsApp Kennisgewings vir Laaste Inskrywings:")
+    with col_wa_clr:
+        if st.button("🗑️ Maak WhatsApp Lysie Skoon"):
+            st.session_state.laaste_wa_skakels = []
+            st.rerun()
+            
     for wa_data in st.session_state.laaste_wa_skakels:
         tipe_ikoon = "🟢" if wa_data['tipe'] == "Positief" else "🔴"
         st.markdown(
