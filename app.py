@@ -445,6 +445,8 @@ def open_gedrag_dialog(gekoose_leerders):
             log_gedrag_massa(gekoose_leerders, "Positief", "Hulpvaardig", 1, pop_nota)
         if st.button("🌟 Goeie waardes", key="pop_waardes"):
             log_gedrag_massa(gekoose_leerders, "Positief", "Goeie waardes", 1, pop_nota)
+        if st.button("😊 Altyd vriendelik", key="pop_vriendelik"):
+            log_gedrag_massa(gekoose_leerders, "Positief", "Altyd vriendelik", 1, pop_nota)
             
     with col_p2:
         st.markdown("🔴 **Negatief (-1)**")
