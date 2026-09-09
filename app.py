@@ -295,7 +295,7 @@ Van Wyk Carah, 0821234591, carah@voorbeeld.co.za
 Vogel Jaco, 0821234592, jaco@voorbeeld.co.za
 Walters Yvonne, 0821234593, yvonne@voorbeeld.co.za
 Wijgergangs Jayden, 0821234594, jayden@voorbeeld.co.za
-Willers Lilly, 0821234595, lilly@voorbeeld.co.za
+Willers Lilly, 0722441618, lilly@voorbeeld.co.za
 Williams Ethan, 0821234596, ethan@voorbeeld.co.za"""
 
 # --- INSTELINGS ---
