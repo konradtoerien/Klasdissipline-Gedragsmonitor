@@ -12,9 +12,10 @@ from email.mime.multipart import MIMEMultipart
 import plotly.express as px
 from fpdf import FPDF
 
-st.set_page_config(page_title="Gr.7 KT Klasdissipline", layout="wide")
+st.set_page_config(page_title="Laerskool Swartland - Gr.7 KT Klasdissipline", layout="wide")
 
-# Tema en CSS Styl
+# Swartland Kleurskema & Styl
+# Hoofkleure: Vlootblou (#002147), Goud/Geel (#FFD700), Wit (#FFFFFF), Donkerblou (#001530)
 st.markdown("""
     <style>
     header[data-testid="stHeader"], .stAppHeader {
@@ -22,74 +23,67 @@ st.markdown("""
     }
     
     .stAppViewMain {
-        padding-top: 0px !important;
+        padding-top: 10px !important;
     }
 
     .stApp {
-        background-color: #0d1b2a !important;
+        background-color: #002147 !important;
         color: #ffffff !important;
     }
 
-    /* Text Inputs & Text Areas: Dark, high-contrast text on bright backgrounds */
+    /* Input velde: skoon wit agtergrond met donker teks */
     .stTextInput input, .stTextArea textarea {
-        color: #0d1b2a !important;
+        color: #002147 !important;
         background-color: #ffffff !important;
-        font-weight: 500 !important;
-        border-radius: 4px !important;
+        font-weight: 600 !important;
+        border: 2px solid #FFD700 !important;
+        border-radius: 6px !important;
     }
 
-    /* Knoppie-style vir Positief en Negatief */
+    /* Standaard Knoppies Styl */
     .stButton>button {
         width: 100%;
-        height: 32px !important;
-        font-size: 10px !important;
-        font-weight: bold;
-        border-radius: 4px;
-        padding: 0px !important;
-        margin-bottom: 0px !important;
+        background-color: #001530 !important;
+        color: #FFD700 !important;
+        font-size: 13px !important;
+        font-weight: bold !important;
+        border: 1px solid #FFD700 !important;
+        border-radius: 6px !important;
+        padding: 6px 10px !important;
         transition: all 0.2s ease-in-out !important;
     }
 
-    /* Button Hover / Cursor Highlight Effect */
+    /* Cursor Hover effek */
     .stButton>button:hover {
-        background-color: #f4a261 !important;
-        color: #0d1b2a !important;
-        border-color: #f4a261 !important;
-        transform: scale(1.03) !important;
-        box-shadow: 0px 0px 8px rgba(244, 162, 97, 0.6) !important;
+        background-color: #FFD700 !important;
+        color: #002147 !important;
+        transform: scale(1.02) !important;
+        box-shadow: 0px 0px 10px rgba(255, 215, 0, 0.7) !important;
         cursor: pointer !important;
     }
 
-    div[data-testid="stHorizontalBlock"] {
-        gap: 0.2rem !important;
-        align-items: center !important;
-    }
-    
     h1, h2, h3, h4, label, p {
-        color: #e0e1dd !important;
-        margin-bottom: 0.1rem !important;
+        color: #ffffff !important;
+        margin-bottom: 0.2rem !important;
     }
-    
-    .student-label {
-        font-size: 11px;
-        font-weight: bold;
-        color: #f4a261;
-        line-height: 32px;
-        height: 32px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: flex;
-        align-items: center;
+
+    /* Student Kaartjie Styl vir Klasrekenaar Raster */
+    .student-card {
+        background-color: #001530;
+        border: 1px solid #FFD700;
+        border-radius: 8px;
+        padding: 8px 12px;
+        margin-bottom: 8px;
+        text-align: center;
     }
 
     .app-footer {
         text-align: center;
-        color: #778da9 !important;
-        font-size: 10px;
+        color: #FFD700 !important;
+        font-size: 11px;
         padding: 15px 0px 5px 0px;
         margin-top: 20px;
-        border-top: 1px solid #1b263b;
+        border-top: 1px solid #FFD700;
     }
 
     /* WhatsApp Knoppie Styl */
@@ -146,11 +140,19 @@ if "gedrag_events" not in st.session_state:
 if "laaste_wa_skakels" not in st.session_state:
     st.session_state.laaste_wa_skakels = []
 
-st.title("🏫 Klasdissipline & Gedragsmonitor")
+# --- KOPSTUK MET LAERSKOOL SWARTLAND TEMA & LOGO ---
+col_logo, col_title = st.columns([1, 5])
+with col_logo:
+    # Laerskool Swartland Amptelike Logo URL
+    st.image("https://swartlandls.co.za/wp-content/uploads/2021/04/swartland-logo.png", width=110)
+with col_title:
+    st.markdown("<h1 style='color: #FFD700 !important; font-size: 28px; margin-top: 10px;'>LAERSKOOL SWARTLAND</h1>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color: #ffffff !important; font-size: 18px;'>🏫 Gr.7 KT Klasdissipline & Gedragsmonitor</h3>", unsafe_allow_html=True)
+
+st.divider()
 
 # --- GRATIS WHATSAPP SKAKEL GENERATOR ---
 def skep_whatsapp_skakel(selnommer, leerder_naam, tipe, gedrag, opvoeder, nota=""):
-    """Genereer 'n whatsapp:// skakel wat die WhatsApp app direk oopmaak."""
     if not selnommer or not str(selnommer).strip():
         return None
     
@@ -165,14 +167,15 @@ def skep_whatsapp_skakel(selnommer, leerder_naam, tipe, gedrag, opvoeder, nota="
     
     boodskap = f"""Beste Ouer,
 
-Hierdie is 'n {tipe.lower()} kennisgewing rakende *{leerder_naam}* in {opvoeder} se klas.
+Hierdie is 'n {tipe.lower()} kennisgewing van Laerskool Swartland rakende *{leerder_naam}* in {opvoeder} se klas.
 
 {ikoon} *Gedrag/Aanmoediging:* {gedrag}
 📅 *Datum/Tyd:* {tyd_nou}
 📝 *Opmerking:* {nota if nota else 'Geen verdere opmerkings nie.'}
 
 Vriendelike groete,
-{opvoeder}"""
+{opvoeder}
+Laerskool Swartland"""
 
     encoded_boodskap = urllib.parse.quote(boodskap)
     return f"whatsapp://send?phone={skoon_nommer}&text={encoded_boodskap}"
@@ -189,22 +192,21 @@ def stuur_ouer_epos(ontvanger_epos, leerder_naam, gedrag, opvoeder, nota=""):
         sender_password = st.secrets["email"]["sender_password"]
 
         msg = MIMEMultipart()
-        msg['From'] = f"{opvoeder} <{sender_email}>"
+        msg['From'] = f"{opvoeder} - Laerskool Swartland <{sender_email}>"
         msg['To'] = ontvanger_epos
-        msg['Subject'] = f"Gedragskennisgewing: {leerder_naam}"
+        msg['Subject'] = f"Laerskool Swartland Gedragskennisgewing: {leerder_naam}"
 
         body = f"""Beste Ouer,
 
-Hierdie is 'n outomatiese kennisgewing rakende {leerder_naam} in {opvoeder} se klas.
+Hierdie is 'n outomatiese kennisgewing van Laerskool Swartland rakende {leerder_naam} in {opvoeder} se klas.
 
 Gedrag Aangemeld: {gedrag}
 Datum/Tyd: {datetime.datetime.now(pytz.timezone('Africa/Johannesburg')).strftime('%Y-%m-%d %H:%M')}
 Opmerking: {nota if nota else 'Geen verdere opmerkings nie.'}
 
-Aanvaar asseblief hierdie kennisgewing ter inligting.
-
 Vriendelike groete,
 {opvoeder}
+Laerskool Swartland
 """
         msg.attach(MIMEText(body, 'plain'))
 
@@ -224,7 +226,7 @@ def genereer_leerder_pdf(leerder_naam, df_leerder_events, opvoeder_naam, klas_na
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 16)
     
-    pdf.cell(0, 10, f"Gedragsverslag: {leerder_naam}", new_x="LMARGIN", new_y="NEXT", align="C")
+    pdf.cell(0, 10, f"Laerskool Swartland - Gedragsverslag: {leerder_naam}", new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.set_font("Helvetica", "", 10)
     pdf.cell(0, 6, f"Klas: {klas_naam} | Opvoeder: {opvoeder_naam} | Datum: {datetime.date.today().strftime('%Y-%m-%d')}", new_x="LMARGIN", new_y="NEXT", align="C")
     pdf.ln(8)
@@ -261,7 +263,7 @@ def genereer_leerder_pdf(leerder_naam, df_leerder_events, opvoeder_naam, klas_na
         
     pdf.ln(10)
     pdf.set_font("Helvetica", "I", 9)
-    pdf.multi_cell(0, 5, "Hierdie verslag is outomaties geskep deur die Klasdissipline & Gedragsmonitor stelsel.")
+    pdf.multi_cell(0, 5, "Hierdie verslag is outomaties geskep deur Laerskool Swartland se Klasdissipline Stelsel.")
     
     return bytes(pdf.output())
 
@@ -269,12 +271,12 @@ def genereer_leerder_pdf(leerder_naam, df_leerder_events, opvoeder_naam, klas_na
 default_leerders_met_kontak = """Burger Frederick, 0821234567, frederick@voorbeeld.co.za
 Carelse Anna-Marie, 0821234568, annamarie@voorbeeld.co.za
 Carstens Simon, 0821234569, simon@voorbeeld.co.za
-Claassen JJ, 0829529901, jmhclaassen@gmail.com
-Coetzee Zoë, 0625236510, chenitavdw@gmail.com
-Conradie Christel, 0829216737, marian.conradie@gmail.com
+Claassen JJ, 0821234570, jj@voorbeeld.co.za
+Coetzee Zoë, 0821234571, zoe@voorbeeld.co.za
+Conradie Christel, 0821234572, christel@voorbeeld.co.za
 De Lange Chantenique, 0821234573, chantenique@voorbeeld.co.za
-Geldenhuys Lani, 0736217513, Bkskoonmaakmiddels@gmail.com
-Haak Wilrich, 0737101754, stefaniehaak3@gmail.com
+Geldenhuys Lani, 0821234574, lani@voorbeeld.co.za
+Haak Wilrich, 0821234575, wilrich@voorbeeld.co.za
 Jenneke Kian, 0821234576, kian@voorbeeld.co.za
 Keffers Phoenix, 0821234577, phoenix@voorbeeld.co.za
 Krugel Willem, 0821234578, willem@voorbeeld.co.za
@@ -282,16 +284,16 @@ Lakey Lenvan, 0821234579, lenvan@voorbeeld.co.za
 Lewies Jolynn, 0821234580, jolynn@voorbeeld.co.za
 Mostert Caleb, 0821234581, caleb@voorbeeld.co.za
 Munnik Aniecke, 0821234582, aniecke@voorbeeld.co.za
-Nackerdien Fariah, 0739412620, Kautharnackerdien8@gmail.com
-Roscher Lianke, 0823427576, nicolivanwyk@yahoo.com
+Nackerdien Fariah, 0821234583, fariah@voorbeeld.co.za
+Roscher Lianke, 0821234584, lianke@voorbeeld.co.za
 Smith Tayo, 0821234585, tayo@voorbeeld.co.za
-Strydom El-Jay, 0730955552, Fredelenestrydom21@gmail.com
-Swanepoel Henko, 0832290356, anzkeswanepoel@gmail.com
-Taylor Theart, 0766546735, beofox@gmail.com
+Strydom El-Jay, 0821234586, eljay@voorbeeld.co.za
+Swanepoel Henko, 0821234587, henko@voorbeeld.co.za
+Taylor Theart, 0821234588, theart@voorbeeld.co.za
 Van der Westhuizen Laylah, 0821234589, laylah@voorbeeld.co.za
 Van Tonder Dia, 0821234590, dia@voorbeeld.co.za
-Van Wyk Carah, 0824251990, cyrajadevanwyk123@gmail.com
-Vogel Jaco, 0764160926, Janien@kbooks.co.za
+Van Wyk Carah, 0821234591, carah@voorbeeld.co.za
+Vogel Jaco, 0821234592, jaco@voorbeeld.co.za
 Walters Yvonne, 0821234593, yvonne@voorbeeld.co.za
 Wijgergangs Jayden, 0821234594, jayden@voorbeeld.co.za
 Willers Lilly, 0821234595, lilly@voorbeeld.co.za
@@ -303,12 +305,11 @@ with st.expander("⚙️ Klas Instellings & Ouer Kontak Bestuur", expanded=False
     klas_naam = col_k1.text_input("Klas", value="Gr.7 KT")
     opvoeder_naam = col_k2.text_input("Opvoeder", value="Mnr. Toerien")
     
-    # Skakelaars vir WhatsApp en E-posse
     stuur_wa_aktief = col_k3.checkbox("Skep WhatsApp Skakels", value=True)
     stuur_eposse_aktief = col_k4.checkbox("Stuur Outomatiese E-posse", value=False)
     
     st.markdown("**Opdateer Leerderlyste (Formaat: Naam, Selfoonnommer, E-posadres):**")
-    raw_leerders = st.text_area("Leerder lys:", value=default_leerders_met_kontak, height=200)
+    raw_leerders = st.text_area("Leerder lys:", value=default_leerders_met_kontak, height=180)
     
     student_dict = {}
     for line in raw_leerders.split("\n"):
@@ -319,7 +320,7 @@ with st.expander("⚙️ Klas Instellings & Ouer Kontak Bestuur", expanded=False
             epos = parts[2] if len(parts) > 2 else ""
             student_dict[naam] = {"sel": sel, "epos": epos}
 
-# Funksie om voorvalle vir 'n LYS leerders te registreer
+# Funksie om voorvalle te registreer
 def log_gedrag_massa(leerders_lys, tipe, aksie, punte, nota=""):
     if not leerders_lys:
         st.warning("⚠️ Geen leerders is gekies nie!")
@@ -350,14 +351,12 @@ def log_gedrag_massa(leerders_lys, tipe, aksie, punte, nota=""):
         
         st.session_state.gedrag_events.append(nuwe_ry)
         
-        # Skryf na Google Sheet
         if sheet:
             try:
                 sheet.append_row([t_min, klas_naam, opvoeder_naam, leerder, uer_sel, uer_epos, tipe, aksie, punte, nota])
             except Exception as e:
                 st.error(f"Kon nie opstoor in Google Sheet vir {leerder}: {e}")
         
-        # Skep WhatsApp Skakels slegs as die skakelaar AAN is én daar 'n nommer is
         if stuur_wa_aktief and uer_sel:
             wa_url = skep_whatsapp_skakel(uer_sel, leerder, tipe, aksie, opvoeder_naam, nota)
             if wa_url:
@@ -369,7 +368,6 @@ def log_gedrag_massa(leerders_lys, tipe, aksie, punte, nota=""):
                     "kontak": uer_sel
                 })
         
-        # Stuur E-posse slegs as die skakelaar AAN is én daar 'n e-posadres is
         if stuur_eposse_aktief and uer_epos:
             stuur_ouer_epos(uer_epos, leerder, aksie, opvoeder_naam, nota)
 
@@ -392,59 +390,58 @@ def kanselleer_laaste():
         st.toast(f"↩️ Verwyder: {laaste['Leerder']} - {laaste['Gedrag']}")
         st.rerun()
 
-st.divider()
-
-# --- SPESIFIEKE NOTA INSET ---
-optionele_nota = st.text_input("📝 Opsionele Opmerking/Nota (Tik hier voor jy 'n knoppie druk):", value="")
-
-st.divider()
+# --- POP-UP DIALOG FUNKSIE VIR GEDRAGSTOEKENNING ---
+@st.dialog("📝 Toeekenning van Gedrag / Punte")
+def open_gedrag_dialog(gekoose_leerders):
+    st.markdown(f"**Gekoose Leerder(s):** {', '.join(gekoose_leerders)}")
+    pop_nota = st.text_input("Spesifieke Opmerking / Nota (Opsioneel):", key="dialog_nota")
+    
+    st.markdown("---")
+    st.markdown("**Kies Gedragstipe:**")
+    
+    col_p1, col_p2 = st.columns(2)
+    with col_p1:
+        st.markdown("🟢 **Positief (+1)**")
+        if st.button("🤝 Hulpvaardig", key="pop_hulp"):
+            log_gedrag_massa(gekoose_leerders, "Positief", "Hulpvaardig", 1, pop_nota)
+        if st.button("🌟 Goeie waardes", key="pop_waardes"):
+            log_gedrag_massa(gekoose_leerders, "Positief", "Goeie waardes", 1, pop_nota)
+            
+    with col_p2:
+        st.markdown("🔴 **Negatief (-1)**")
+        if st.button("🗣️ Gesels konstant", key="pop_gesels"):
+            log_gedrag_massa(gekoose_leerders, "Negatief", "Gesels konstant", -1, pop_nota)
+        if st.button("⚠️ Swak dissipline", key="pop_dissipline"):
+            log_gedrag_massa(gekoose_leerders, "Negatief", "Swak dissipline", -1, pop_nota)
+        if st.button("🚩 Waarskuwing", key="pop_waarsk"):
+            log_gedrag_massa(gekoose_leerders, "Negatief", "Waarskuwing", -1, pop_nota)
 
 # --- MASSAKIESER (MULTI-SELECT REGMERKIES) ---
-st.markdown("#### 👥 GROEP / MASSA LEERDER KIESER")
+st.markdown("#### 👥 GROEP / MASSA SELEKSIE")
 gekoose_groep = st.multiselect(
-    "Merk/Kies een of meer leerders vir dieselfde inskrywing:",
+    "Merk een of meer leerders vir gelyktydige toekenning:",
     options=sorted(list(student_dict.keys())),
-    help="Kies verskeie leerders as jy vir almal gelyktydig dieselfde positiewe of negatiewe punte wil gee."
+    help="Kies verskeie leerders om gelyktydige inskrywings te maak."
 )
 
 if gekoose_groep:
-    st.markdown(f"**Pas aksie toe op {len(gekoose_groep)} gekose leerder(s):**")
-    m_b1, m_b2, m_b3, m_b4, m_b5 = st.columns(5)
-    
-    if m_b1.button("🤝 Hulpvaardig (+1)", key="massa_hulp"):
-        log_gedrag_massa(gekoose_groep, "Positief", "Hulpvaardig", 1, optionele_nota)
-    if m_b2.button("🌟 Goeie waardes (+1)", key="massa_waardes"):
-        log_gedrag_massa(gekoose_groep, "Positief", "Goeie waardes", 1, optionele_nota)
-    if m_b3.button("🗣️ Gesels konstant (-1)", key="massa_gesels"):
-        log_gedrag_massa(gekoose_groep, "Negatief", "Gesels konstant", -1, optionele_nota)
-    if m_b4.button("⚠️ Swak dissipline (-1)", key="massa_dissipline"):
-        log_gedrag_massa(gekoose_groep, "Negatief", "Swak dissipline", -1, optionele_nota)
-    if m_b5.button("🚩 Waarskuwing (-1)", key="massa_waarsk"):
-        log_gedrag_massa(gekoose_groep, "Negatief", "Waarskuwing", -1, optionele_nota)
+    if st.button(f"⚡ Kliek hier om Aksie Toe te pas op {len(gekoose_groep)} Leerder(s)"):
+        open_gedrag_dialog(gekoose_groep)
 
 st.divider()
 
-# --- INDIVIDUELE LEERDER ROSTER & GEDRAGSKNOPPIES ---
-st.markdown("#### 🏃 INDIVIDUELE LEERDER SKAKELS")
-st.caption("🟢 **Positief (+1):** Hulpvaardig | Goeie waardes  ──  🔴 **Negatief (-1):** Gesels konstant | Swak dissipline | Waarskuwing")
+# --- KLASREKENAAR RASTER (3 KOLOMME VIR OPTIMALE SPASIËRING) ---
+st.markdown("#### 🏃 KLASLEERDERS RASTER")
+st.caption("💡 Kliek op enige leerder se naam om 'n Pop-Up venster oop te maak vir inskrywings.")
 
-for leerder in student_dict.keys():
-    c_label, b1, b2, b3, b4, b5 = st.columns([2.5, 1.2, 1.2, 1.2, 1.2, 1.2])
-    
-    with c_label:
-        st.markdown(f"<div class='student-label'>{leerder}</div>", unsafe_allow_html=True)
-        
-    if b1.button("🤝 Hulpvaardig", key=f"hulp_{leerder}"): 
-        log_gedrag_massa([leerder], "Positief", "Hulpvaardig", 1, optionele_nota)
-    if b2.button("🌟 Goeie waardes", key=f"waardes_{leerder}"): 
-        log_gedrag_massa([leerder], "Positief", "Goeie waardes", 1, optionele_nota)
-        
-    if b3.button("🗣️ Gesels konstant", key=f"gesels_{leerder}"): 
-        log_gedrag_massa([leerder], "Negatief", "Gesels konstant", -1, optionele_nota)
-    if b4.button("⚠️ Swak dissipline", key=f"dissipline_{leerder}"): 
-        log_gedrag_massa([leerder], "Negatief", "Swak dissipline", -1, optionele_nota)
-    if b5.button("🚩 Waarskuwing", key=f"waarsk_{leerder}"): 
-        log_gedrag_massa([leerder], "Negatief", "Waarskuwing", -1, optionele_nota)
+leerders_lys_gesorteer = sorted(list(student_dict.keys()))
+cols = st.columns(3) # 3 Kolomme vir Landscape Klasrekenaar skerms
+
+for idx, leerder in enumerate(leerders_lys_gesorteer):
+    col_target = cols[idx % 3]
+    with col_target:
+        if st.button(f"👤 {leerder}", key=f"btn_card_{leerder}"):
+            open_gedrag_dialog([leerder])
 
 st.divider()
 
@@ -570,4 +567,4 @@ if st.session_state.gedrag_events:
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
 
-st.markdown("<div class='app-footer'>Klasdissipline & Gedragsmonitor - Gr.7 KT</div>", unsafe_allow_html=True)
+st.markdown("<div class='app-footer'>Laerskool Swartland • Klasdissipline & Gedragsmonitor - Gr.7 KT</div>", unsafe_allow_html=True)
