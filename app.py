@@ -32,17 +32,28 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* Pop-Up / Dialog (Modal) Styling vir Donker Agtergrond & Duidelike Teks */
-    div[role="dialog"], div[data-testid="stModal"] > div {
+    /* Pop-Up / Dialog (Modal) Styling vir Donker Vlootblou Agtergrond & Duidelike Teks */
+    div[data-testid="stDialog"], 
+    div[data-testid="stModal"], 
+    div[role="dialog"],
+    div[role="dialog"] > div {
+        background-color: #001530 !important;
+        color: #ffffff !important;
+        border-radius: 10px !important;
+    }
+    
+    /* Maak die venster se inhoud en rand goud en vlootblou */
+    div[data-testid="stDialog"] > div:nth-child(1),
+    div[role="dialog"] > div:nth-child(1) {
         background-color: #001530 !important;
         border: 2px solid #FFD700 !important;
         border-radius: 10px !important;
-        color: #ffffff !important;
+        padding: 20px !important;
     }
     
-    div[role="dialog"] p, div[role="dialog"] span, div[role="dialog"] h1, 
-    div[role="dialog"] h2, div[role="dialog"] h3, div[role="dialog"] h4, 
-    div[role="dialog"] label, div[role="dialog"] div {
+    /* Al die teks binne-in die Pop-Up venster */
+    div[data-testid="stDialog"] *, 
+    div[role="dialog"] * {
         color: #ffffff !important;
     }
 
@@ -81,7 +92,7 @@ st.markdown("""
         cursor: pointer !important;
     }
 
-    /* Spesiaal ingestelde styl vir Aflaai/Download Knoppies sodat dit DUIDELIK leesbaar is */
+    /* Spesiaal ingestelde styl vir Aflaai/Download Knoppies */
     .stDownloadButton>button {
         width: 100% !important;
         background-color: #FFD700 !important;
