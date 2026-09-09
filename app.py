@@ -16,7 +16,6 @@ from fpdf import FPDF
 st.set_page_config(page_title="Laerskool Swartland - Gr.7 KT Klasdissipline", layout="wide")
 
 # Swartland Kleurskema & Styl
-# Hoofkleure: Vlootblou (#002147), Goud/Geel (#FFD700), Wit (#FFFFFF), Donkerblou (#001530)
 st.markdown("""
     <style>
     header[data-testid="stHeader"], .stAppHeader {
@@ -80,25 +79,6 @@ st.markdown("""
         margin-top: 15px;
         border-top: 1px solid #FFD700;
     }
-
-    /* WhatsApp Knoppie Styl */
-    .wa-button {
-        display: inline-block;
-        background-color: #25D366;
-        color: #ffffff !important;
-        padding: 5px 10px;
-        font-size: 11px;
-        font-weight: bold;
-        text-decoration: none;
-        border-radius: 5px;
-        margin-top: 2px;
-        margin-bottom: 2px;
-        box-shadow: 0px 2px 4px rgba(0,0,0,0.3);
-    }
-    .wa-button:hover {
-        background-color: #128C7E;
-        color: #ffffff !important;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -138,12 +118,11 @@ if "laaste_wa_skakels" not in st.session_state:
 # --- KOPSTUK MET LAERSKOOL SWARTLAND TEMA & LOGO ---
 col_logo, col_title = st.columns([1, 6])
 with col_logo:
-    # Kyk of die logo plaaslik bestaan, anders gebruik gehuisvesde prent
     logo_pad = "swartland_logo.png"
     if os.path.exists(logo_pad):
         st.image(logo_pad, width=90)
     else:
-        st.image("https://raw.githubusercontent.com/streamlit/st-image/main/images/cat.jpg", width=90) # Kan vervang word of plaaslik gestoor word
+        st.image("https://raw.githubusercontent.com/streamlit/st-image/main/images/cat.jpg", width=90)
 with col_title:
     st.markdown("<h1 style='color: #FFD700 !important; font-size: 26px; margin-top: 5px;'>LAERSKOOL SWARTLAND</h1>", unsafe_allow_html=True)
     st.markdown("<h3 style='color: #ffffff !important; font-size: 16px;'>🏫 Gr.7 KT Klasdissipline & Gedragsmonitor</h3>", unsafe_allow_html=True)
@@ -435,7 +414,7 @@ st.markdown("#### 🏃 KLASLEERDERS RASTER (5 Kolomme x 6 Rye)")
 st.caption("💡 Kliek op enige leerder se naam om die Pop-Up venster oop te maak.")
 
 leerders_lys_gesorteer = sorted(list(student_dict.keys()))
-cols = st.columns(5) # Presies 5 Kolomme vir 6 Rye
+cols = st.columns(5)
 
 for idx, leerder in enumerate(leerders_lys_gesorteer):
     col_target = cols[idx % 5]
@@ -459,23 +438,34 @@ with col_ctrl2:
 
 st.divider()
 
-# --- WHATSAPP STUUR BANNER MET SKOONMAAK OPSIE ---
+# --- WHATSAPP STUUR BANNER MET INDIVIDUELE VERWYDERING ---
 if st.session_state.laaste_wa_skakels:
     col_wa_hdr, col_wa_clr = st.columns([4, 1])
     with col_wa_hdr:
         st.markdown("### 📲 Stuur WhatsApp Kennisgewings vir Laaste Inskrywings:")
     with col_wa_clr:
-        if st.button("🗑️ Maak WhatsApp Lysie Skoon"):
+        if st.button("🗑️ Maak Alles Skoon"):
             st.session_state.laaste_wa_skakels = []
             st.rerun()
             
+    # Vertoon en verwyder individuele knoppies
+    oorblewende_skakels = []
     for wa_data in st.session_state.laaste_wa_skakels:
         tipe_ikoon = "🟢" if wa_data['tipe'] == "Positief" else "🔴"
-        st.markdown(
-            f"{tipe_ikoon} **{wa_data['leerder']}** ({wa_data['kontak']}): "
-            f"<a href='{wa_data['url']}' target='_self' class='wa-button'>Stuur WhatsApp ({wa_data['aksie']})</a>", 
-            unsafe_allow_html=True
-        )
+        col_txt, col_btn = st.columns([3, 1])
+        with col_txt:
+            st.markdown(f"{tipe_ikoon} **{wa_data['leerder']}** ({wa_data['kontak']}) - *{wa_data['aksie']}*")
+        with col_btn:
+            if st.button(f"📲 Stuur & Verwyder", key=f"btn_wa_{wa_data['id']}"):
+                js_code = f"<script>window.open('{wa_data['url']}', '_self');</script>"
+                st.components.v1.html(js_code, height=0)
+            else:
+                oorblewende_skakels.append(wa_data)
+                
+    if len(oorblewende_skakels) != len(st.session_state.laaste_wa_skakels):
+        st.session_state.laaste_wa_skakels = oorblewende_skakels
+        st.rerun()
+
     st.divider()
 
 # --- EXPORT, GRAFIEKE & OPSOMMING ---
