@@ -32,6 +32,20 @@ st.markdown("""
         color: #ffffff !important;
     }
 
+    /* Pop-Up / Dialog (Modal) Styling vir Donker Agtergrond & Duidelike Teks */
+    div[role="dialog"], div[data-testid="stModal"] > div {
+        background-color: #001530 !important;
+        border: 2px solid #FFD700 !important;
+        border-radius: 10px !important;
+        color: #ffffff !important;
+    }
+    
+    div[role="dialog"] p, div[role="dialog"] span, div[role="dialog"] h1, 
+    div[role="dialog"] h2, div[role="dialog"] h3, div[role="dialog"] h4, 
+    div[role="dialog"] label, div[role="dialog"] div {
+        color: #ffffff !important;
+    }
+
     /* Input velde: skoon wit agtergrond met donker teks */
     .stTextInput input, .stTextArea textarea {
         color: #002147 !important;
@@ -405,9 +419,9 @@ def kanselleer_laaste():
         st.rerun()
 
 # --- POP-UP DIALOG FUNKSIE VIR GEDRAGSTOEKENNING ---
-@st.dialog("📝 Toeekenning van Gedrag / Punte")
+@st.dialog("📝 Toekenning van Gedrag / Punte")
 def open_gedrag_dialog(gekoose_leerders):
-    st.markdown(f"**Gekoose Leerder(s):** {', '.join(gekoose_leerders)}")
+    st.markdown(f"**Gekose Leerder(s):** {', '.join(gekoose_leerders)}")
     pop_nota = st.text_input("Spesifieke Opmerking / Nota (Opsioneel):", key="dialog_nota")
     
     st.markdown("---")
