@@ -267,36 +267,36 @@ def genereer_leerder_pdf(leerder_naam, df_leerder_events, opvoeder_naam, klas_na
     return bytes(pdf.output())
 
 # --- DEFAULT LEERDERLYST MET BEIDE SELNOMMER & EPOS ---
-default_leerders_met_kontak = """Burger Frederick, 0821234567, frederick@voorbeeld.co.za
-Carelse Anna-Marie, 0821234568, annamarie@voorbeeld.co.za
-Carstens Simon, 0821234569, simon@voorbeeld.co.za
-Claassen JJ, 0821234570, jj@voorbeeld.co.za
-Coetzee Zoë, 0821234571, zoe@voorbeeld.co.za
-Conradie Christel, 0821234572, christel@voorbeeld.co.za
-De Lange Chantenique, 0821234573, chantenique@voorbeeld.co.za
-Geldenhuys Lani, 0821234574, lani@voorbeeld.co.za
-Haak Wilrich, 0821234575, wilrich@voorbeeld.co.za
-Jenneke Kian, 0821234576, kian@voorbeeld.co.za
-Keffers Phoenix, 0821234577, phoenix@voorbeeld.co.za
-Krugel Willem, 0821234578, willem@voorbeeld.co.za
-Lakey Lenvan, 0821234579, lenvan@voorbeeld.co.za
-Lewies Jolynn, 0821234580, jolynn@voorbeeld.co.za
-Mostert Caleb, 0821234581, caleb@voorbeeld.co.za
-Munnik Aniecke, 0821234582, aniecke@voorbeeld.co.za
-Nackerdien Fariah, 0821234583, fariah@voorbeeld.co.za
-Roscher Lianke, 0821234584, lianke@voorbeeld.co.za
-Smith Tayo, 0821234585, tayo@voorbeeld.co.za
-Strydom El-Jay, 0821234586, eljay@voorbeeld.co.za
-Swanepoel Henko, 0821234587, henko@voorbeeld.co.za
-Taylor Theart, 0821234588, theart@voorbeeld.co.za
-Van der Westhuizen Laylah, 0821234589, laylah@voorbeeld.co.za
-Van Tonder Dia, 0821234590, dia@voorbeeld.co.za
-Van Wyk Carah, 0821234591, carah@voorbeeld.co.za
-Vogel Jaco, 0821234592, jaco@voorbeeld.co.za
-Walters Yvonne, 0821234593, yvonne@voorbeeld.co.za
-Wijgergangs Jayden, 0821234594, jayden@voorbeeld.co.za
-Willers Lilly, 0722441618, lilly@voorbeeld.co.za
-Williams Ethan, 0821234596, ethan@voorbeeld.co.za"""
+default_leerders_met_kontak = """Burger Frederick, 0825442210, cornel.loubser@gmail.com
+Carelse Anna-Marie, 0716825677, carelsequinten@gmail.com
+Carstens Simon, 0723984064, carin@seedgbn.co.za
+Claassen JJ, 0829529901, jmhclaassen@gmail.com
+Coetzee Zoë, 0625236510, chenitavdw@gmail.com
+Conradie Christel, 0829216737, marian.conradie@gmail.com
+De Lange Chantenique, 0840796702, annekedel.2112@gmail.com
+Geldenhuys Lani, 0736217513, Bkskoonmaakmiddels@gmail.com
+Haak Wilrich, 0737101754, stefaniehaak3@gmail.com
+Jenneke Kian, 0716866946, jennekesimone@gmail.com
+Keffers Phoenix, 0612732319, mkeffers30@gmail.com
+Krugel Willem, 0792437277, willem@voorbeeld.co.za
+Lakey Lenvan, 0732147054, lakeyevangileen@gmail.com
+Lewies Jolynn, 0651194642, jolynn@voorbeeld.co.za
+Mostert Caleb, 0820753949, JacMost1982@gmail.com
+Munnik Aniecke, 0826009955, nelita_dewet@yahoo.com
+Nackerdien Fariah, 0739412620, Kautharnackerdien8@gmail.com
+Roscher Lianke, 0823427576, nicolivanwyk@yahoo.com
+Smith Tayo, 0823701140, jmichelle.smith02@gmail.com
+Strydom El-Jay, 0730955552, Fredelenestrydom21@gmail.com
+Swanepoel Henko, 0832290356, anzkeswanepoel@gmail.com
+Taylor Theart, 0766546735, beofox@gmail.com
+Van der Westhuizen Laylah, 0781791747, laylah@voorbeeld.co.za
+Van Tonder Dia, 0849517558, anisavantonder@gmail.com
+Van Wyk Carah, 0824251990, cyrajadevanwyk123@gmail.com
+Vogel Jaco, 0764160926, Janien@kbooks.co.za
+Walters Yvonne, 0835663059, fm@waltersgrp.co.za
+Wijgergangs Jayden, 0824511227, Renewijgergangs@gmail.com
+Willers Lilly, 0722441618, arendimoller@yahoo.com
+Williams Ethan, 0682151915, ethan@voorbeeld.co.za"""
 
 # --- INSTELINGS ---
 with st.expander("⚙️ Klas Instellings & Ouer Kontak Bestuur", expanded=False):
