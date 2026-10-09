@@ -204,7 +204,7 @@ Vriendelike groete,
 Laerskool Swartland"""
 
     encoded_boodskap = urllib.parse.quote(boodskap)
-    return f"whatsapp://send?phone={skoon_nommer}&text={encoded_boodskap}"
+    return f"https://api.whatsapp.com/send?phone={skoon_nommer}&text={encoded_boodskap}"
 
 # --- EMAIL KENNISGEWING FUNKSIE ---
 def stuur_ouer_epos(ontvanger_epos, leerder_naam, gedrag, opvoeder, nota=""):
@@ -500,8 +500,8 @@ with col_ctrl2:
 
 st.divider()
 
-# --- WHATSAPP STUUR BANNER MET INDIVIDUELE VERWYDERING ---
-if st.session_state.laaste_wa_skakels:
+# --- WHATSAPP STUUR BANNER (ONAFHANKLIK VAN GEMAAKTE INSKRYWINGS) ---
+if st.session_state.laaste_wa_skakels and len(st.session_state.laaste_wa_skakels) > 0:
     col_wa_hdr, col_wa_clr = st.columns([4, 1])
     with col_wa_hdr:
         st.markdown("### 📲 Stuur WhatsApp Kennisgewings vir Laaste Inskrywings:")
@@ -517,23 +517,14 @@ if st.session_state.laaste_wa_skakels:
         with col_txt:
             st.markdown(f"{tipe_ikoon} **{wa_data['leerder']}** ({wa_data['kontak']}) - *{wa_data['aksie']}*")
         with col_btn:
-            if st.button(f"📲 Stuur & Verwyder", key=f"btn_wa_{wa_data['id']}"):
-                js_code = f"<script>window.open('{wa_data['url']}', '_self');</script>"
-                st.components.v1.html(js_code, height=0)
-            else:
-                oorblewende_skakels.append(wa_data)
-                
-    if len(oorblewende_skakels) != len(st.session_state.laaste_wa_skakels):
-        st.session_state.laaste_wa_skakels = oorblewende_skakels
-        st.rerun()
-
+            st.link_button(f"📲 Stuur WhatsApp", wa_data['url'])
+            
     st.divider()
 
 # --- EXPORT, GRAFIEKE & OPSOMMING ---
 if st.session_state.gedrag_events and len(st.session_state.gedrag_events) > 0:
     df_events = pd.DataFrame(st.session_state.gedrag_events)
     
-    # Veiligheidskontrole: Maak seker die verwagte kolomme bestaan voor analise
     if "Leerder" in df_events.columns and "Tipe" in df_events.columns:
         df_pivot = df_events.groupby(["Leerder", "Tipe"]).size().unstack(fill_value=0)
         for col in ["Positief", "Negatief"]:
@@ -645,4 +636,4 @@ if st.session_state.gedrag_events and len(st.session_state.gedrag_events) > 0:
 else:
     st.info("ℹ️ Geen gedrags-voorvalle is nog geregistreer nie. Kliek op 'n leerder om 'n eerste inskrywing te maak.")
 
-st.markdown("<div class='app-footer'>Laerskool Swartland • Klasdissipline & Gedragsmonitor - Gr.7 KT - Geskryf deur Konrad Toerien</div>", unsafe_allow_html=True)
+st.markdown("<div class='app-footer'>Laerskool Swartland • Klasdissipline & Gedragsmonitor - Gr.7 KT</div>", unsafe_allow_html=True)
