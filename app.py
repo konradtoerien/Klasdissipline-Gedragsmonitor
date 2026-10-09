@@ -327,7 +327,7 @@ Roscher Lianke, 0823427576, nicolivanwyk@yahoo.com
 Smith Tayo, 0823701140, jmichelle.smith02@gmail.com
 Strydom El-Jay, 0730955552, Fredelenestrydom21@gmail.com
 Swanepoel Henko, 0832290356, anzkeswanepoel@gmail.com
-Taylor Theart, 0766546735, beofox@gmail.com
+Taylor Theart, 0766536735, beofox@gmail.com
 Van der Westhuizen Laylah, 0781791747, laylah@voorbeeld.co.za
 Van Tonder Dia, 0849517558, anisavantonder@gmail.com
 Van Wyk Carah, 0824251990, cyrajadevanwyk123@gmail.com
